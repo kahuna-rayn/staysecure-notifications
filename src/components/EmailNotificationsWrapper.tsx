@@ -21,14 +21,16 @@ interface EmailNotificationsWrapperProps {
 export const EmailNotificationsWrapper: React.FC<EmailNotificationsWrapperProps> = ({ useAuth, baseUrl, clientPath }) => {
   const { user } = useAuth();
 
-  // Configure EmailService with base URL if provided
+  // Configure EmailService internally when baseUrl is provided
   React.useEffect(() => {
     if (baseUrl) {
-      const { EmailService } = require('../lib/emailService');
-      EmailService.configure({
-        lambdaUrl: '', // This should be provided by the consuming app
-        baseUrl: baseUrl,
-        fromEmail: undefined // This should be provided by the consuming app
+      // Import and configure EmailService internally
+      import('../lib/emailService').then(({ EmailService }) => {
+        EmailService.configure({
+          lambdaUrl: '', // Will be set by consuming app's Supabase Edge Function
+          baseUrl: baseUrl,
+          fromEmail: undefined // Will use default from EmailService
+        });
       });
     }
   }, [baseUrl]);

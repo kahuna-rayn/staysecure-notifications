@@ -513,6 +513,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   __publicField(_EmailService, "instance");
   let EmailService = _EmailService;
   const emailService = EmailService.getInstance();
+  const emailService$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    EmailService,
+    emailService
+  }, Symbol.toStringTag, { value: "Module" }));
   const EmailNotifications = ({
     supabase: supabase2,
     user,
@@ -852,13 +857,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const { user } = useAuth();
     React.useEffect(() => {
       if (baseUrl) {
-        const { EmailService: EmailService2 } = require("../lib/emailService");
-        EmailService2.configure({
-          lambdaUrl: "",
-          // This should be provided by the consuming app
-          baseUrl,
-          fromEmail: void 0
-          // This should be provided by the consuming app
+        Promise.resolve().then(() => emailService$1).then(({ EmailService: EmailService2 }) => {
+          EmailService2.configure({
+            lambdaUrl: "",
+            // Will be set by consuming app's Supabase Edge Function
+            baseUrl,
+            fromEmail: void 0
+            // Will use default from EmailService
+          });
         });
       }
     }, [baseUrl]);
