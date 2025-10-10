@@ -52,5 +52,8 @@ export default defineConfig({
       "@/types": resolve(__dirname, "src/types"),
       "@/lib": resolve(__dirname, "src/lib")
     }
+  },
+  define: {
+    'process.env': '{}'
   }
 });

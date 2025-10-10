@@ -1244,8 +1244,9 @@ const LessonReminderSettingsWrapper = ({
     }
   );
 };
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY || "";
+var define_process_env_default = {};
+const supabaseUrl = define_process_env_default.NEXT_PUBLIC_SUPABASE_URL || define_process_env_default.REACT_APP_SUPABASE_URL || "";
+const supabaseAnonKey = define_process_env_default.NEXT_PUBLIC_SUPABASE_ANON_KEY || define_process_env_default.REACT_APP_SUPABASE_ANON_KEY || "";
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("Supabase URL or Anon Key not found. Please configure your environment variables.");
 }
