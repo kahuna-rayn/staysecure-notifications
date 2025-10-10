@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { EmailNotifications } from '@/modules/notifications/src/components/EmailNotifications';
+import { EmailNotifications } from './EmailNotifications';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+// useAuth should be passed as a prop from the consuming app
 
 // Import UI components from LEARN app
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
-export const EmailNotificationsWrapper: React.FC = () => {
+interface EmailNotificationsWrapperProps {
+  useAuth: () => { user: any };
+}
+
+export const EmailNotificationsWrapper: React.FC<EmailNotificationsWrapperProps> = ({ useAuth }) => {
   const { user } = useAuth();
 
   // Get the current user profile for RLS policies

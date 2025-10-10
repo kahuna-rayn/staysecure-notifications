@@ -9,8 +9,8 @@ export { default as NotificationItem } from './components/NotificationItem';
 export { default as NotificationSettings } from './components/NotificationSettings';
 
 // Hooks
-export { default as useNotificationSettings } from './hooks/useNotificationSettings';
-export { default as useNotifications } from './hooks/useNotifications';
+export { useNotificationSettings } from './hooks/useNotificationSettings';
+export { useNotifications } from './hooks/useNotifications';
 
 // Types
 export * from './types';
