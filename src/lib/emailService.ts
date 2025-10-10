@@ -11,11 +11,13 @@ export class EmailService {
   private static instance: EmailService;
   private lambdaUrl: string;
   private defaultFrom: string;
+  private baseUrl: string;
 
   private constructor() {
     // This will be set by the consuming app
     this.lambdaUrl = '';
     this.defaultFrom = 'kahuna@raynsecure.com';
+    this.baseUrl = '';
   }
 
   public static getInstance(): EmailService {
@@ -28,11 +30,28 @@ export class EmailService {
   public static configure(config: {
     lambdaUrl: string;
     fromEmail?: string;
+    baseUrl?: string;
   }): void {
-    EmailService.getInstance().lambdaUrl = config.lambdaUrl;
+    const instance = EmailService.getInstance();
+    instance.lambdaUrl = config.lambdaUrl;
     if (config.fromEmail) {
-      EmailService.getInstance().defaultFrom = config.fromEmail;
+      instance.defaultFrom = config.fromEmail;
     }
+    if (config.baseUrl) {
+      instance.baseUrl = config.baseUrl;
+    }
+  }
+
+  // Helper method to generate lesson URLs
+  public generateLessonUrl(lessonId: string, clientPath?: string): string {
+    if (!this.baseUrl) {
+      console.warn('Base URL not configured. Please configure EmailService with baseUrl.');
+      return `#/lesson/${lessonId}`;
+    }
+    
+    const base = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
+    const path = clientPath ? `/${clientPath}` : '';
+    return `${base}${path}/#/lesson/${lessonId}`;
   }
 
   async sendEmail(emailData: EmailData, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {

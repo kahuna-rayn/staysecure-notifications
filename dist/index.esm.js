@@ -301,8 +301,10 @@ const _EmailService = class _EmailService {
   constructor() {
     __publicField(this, "lambdaUrl");
     __publicField(this, "defaultFrom");
+    __publicField(this, "baseUrl");
     this.lambdaUrl = "";
     this.defaultFrom = "kahuna@raynsecure.com";
+    this.baseUrl = "";
   }
   static getInstance() {
     if (!_EmailService.instance) {
@@ -311,10 +313,24 @@ const _EmailService = class _EmailService {
     return _EmailService.instance;
   }
   static configure(config) {
-    _EmailService.getInstance().lambdaUrl = config.lambdaUrl;
+    const instance = _EmailService.getInstance();
+    instance.lambdaUrl = config.lambdaUrl;
     if (config.fromEmail) {
-      _EmailService.getInstance().defaultFrom = config.fromEmail;
+      instance.defaultFrom = config.fromEmail;
     }
+    if (config.baseUrl) {
+      instance.baseUrl = config.baseUrl;
+    }
+  }
+  // Helper method to generate lesson URLs
+  generateLessonUrl(lessonId, clientPath) {
+    if (!this.baseUrl) {
+      console.warn("Base URL not configured. Please configure EmailService with baseUrl.");
+      return `#/lesson/${lessonId}`;
+    }
+    const base = this.baseUrl.endsWith("/") ? this.baseUrl.slice(0, -1) : this.baseUrl;
+    const path = clientPath ? `/${clientPath}` : "";
+    return `${base}${path}/#/lesson/${lessonId}`;
   }
   async sendEmail(emailData, supabaseClient) {
     try {
@@ -840,8 +856,20 @@ const EmailNotifications = ({
     ] })
   ] });
 };
-const EmailNotificationsWrapper = ({ useAuth }) => {
+const EmailNotificationsWrapper = ({ useAuth, baseUrl, clientPath }) => {
   const { user } = useAuth();
+  React.useEffect(() => {
+    if (baseUrl) {
+      const { EmailService: EmailService2 } = require("../lib/emailService");
+      EmailService2.configure({
+        lambdaUrl: "",
+        // This should be provided by the consuming app
+        baseUrl,
+        fromEmail: void 0
+        // This should be provided by the consuming app
+      });
+    }
+  }, [baseUrl]);
   const [userProfile, setUserProfile] = React.useState(null);
   useEffect(() => {
     const getProfile = async () => {
@@ -1224,7 +1252,9 @@ const LessonReminderSettingsWrapper = ({
   Input: Input2,
   Label: Label2,
   Alert,
-  AlertDescription
+  AlertDescription,
+  baseUrl,
+  clientPath
 }) => {
   return /* @__PURE__ */ jsx(
     LessonReminderSettings,
@@ -1240,7 +1270,9 @@ const LessonReminderSettingsWrapper = ({
       Input: Input2,
       Label: Label2,
       Alert,
-      AlertDescription
+      AlertDescription,
+      baseUrl,
+      clientPath
     }
   );
 };

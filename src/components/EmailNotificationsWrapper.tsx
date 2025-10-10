@@ -14,10 +14,24 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface EmailNotificationsWrapperProps {
   useAuth: () => { user: any };
+  baseUrl?: string;
+  clientPath?: string;
 }
 
-export const EmailNotificationsWrapper: React.FC<EmailNotificationsWrapperProps> = ({ useAuth }) => {
+export const EmailNotificationsWrapper: React.FC<EmailNotificationsWrapperProps> = ({ useAuth, baseUrl, clientPath }) => {
   const { user } = useAuth();
+
+  // Configure EmailService with base URL if provided
+  React.useEffect(() => {
+    if (baseUrl) {
+      const { EmailService } = require('../lib/emailService');
+      EmailService.configure({
+        lambdaUrl: '', // This should be provided by the consuming app
+        baseUrl: baseUrl,
+        fromEmail: undefined // This should be provided by the consuming app
+      });
+    }
+  }, [baseUrl]);
 
   // Get the current user profile for RLS policies
   const [userProfile, setUserProfile] = React.useState<any>(null);

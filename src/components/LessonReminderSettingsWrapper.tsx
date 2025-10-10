@@ -18,6 +18,8 @@ interface LessonReminderSettingsWrapperProps {
   Label: any;
   Alert: any;
   AlertDescription: any;
+  baseUrl?: string;
+  clientPath?: string;
 }
 
 export const LessonReminderSettingsWrapper: React.FC<LessonReminderSettingsWrapperProps> = ({
@@ -33,6 +35,8 @@ export const LessonReminderSettingsWrapper: React.FC<LessonReminderSettingsWrapp
   Label,
   Alert,
   AlertDescription,
+  baseUrl,
+  clientPath,
 }) => {
   return (
     <LessonReminderSettings
@@ -48,6 +52,8 @@ export const LessonReminderSettingsWrapper: React.FC<LessonReminderSettingsWrapp
       Label={Label}
       Alert={Alert}
       AlertDescription={AlertDescription}
+      baseUrl={baseUrl}
+      clientPath={clientPath}
     />
   );
 };
