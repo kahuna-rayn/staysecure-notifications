@@ -15,6 +15,6 @@ export { useNotifications } from './hooks/useNotifications';
 // Types
 export * from './types';
 
-// Utils
-export * from './utils/supabase';
+// Utils - Supabase should be provided by consuming app
+// export * from './utils/supabase';
 export * from './lib/emailService';

@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { SelectValue, SelectTrigger, SelectItem, SelectContent, Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
-import { createClient } from "@supabase/supabase-js";
+import "@supabase/supabase-js";
 /**
  * @license lucide-react v0.462.0 - ISC
  *
@@ -345,7 +345,7 @@ const _EmailService = class _EmailService {
           };
         }
       } else {
-        const supabaseUrl2 = "https://ufvingocbzegpgjknzhm.supabase.co";
+        const supabaseUrl = "https://ufvingocbzegpgjknzhm.supabase.co";
         const supabaseKey = void 0;
         if (!supabaseKey) {
           return {
@@ -353,7 +353,7 @@ const _EmailService = class _EmailService {
             error: "Supabase client not provided and VITE_SUPABASE_ANON_KEY not configured"
           };
         }
-        const response = await fetch(`${supabaseUrl2}/functions/v1/send-email`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1244,16 +1244,7 @@ const LessonReminderSettingsWrapper = ({
     }
   );
 };
-var define_process_env_default = {};
-const supabaseUrl = define_process_env_default.NEXT_PUBLIC_SUPABASE_URL || define_process_env_default.REACT_APP_SUPABASE_URL || "";
-const supabaseAnonKey = define_process_env_default.NEXT_PUBLIC_SUPABASE_ANON_KEY || define_process_env_default.REACT_APP_SUPABASE_ANON_KEY || "";
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase URL or Anon Key not found. Please configure your environment variables.");
-}
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-const configureSupabase = (url, anonKey) => {
-  return createClient(url, anonKey);
-};
+const supabase = null;
 const useNotifications = (filters = {}) => {
   const queryClient = useQueryClient();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -3672,9 +3663,7 @@ export {
   NotificationCenter,
   NotificationItem,
   NotificationSettings,
-  configureSupabase,
   emailService,
-  supabase,
   useNotificationSettings,
   useNotifications
 };

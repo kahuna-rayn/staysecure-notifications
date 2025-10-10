@@ -1,6 +1,6 @@
 (function(global, factory) {
-  typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("react/jsx-runtime"), require("react"), require("@/integrations/supabase/client"), require("@/components/ui/button"), require("@/components/ui/card"), require("@/components/ui/input"), require("@/components/ui/label"), require("@/components/ui/switch"), require("@/components/ui/select"), require("@/components/ui/textarea"), require("@tanstack/react-query"), require("@supabase/supabase-js")) : typeof define === "function" && define.amd ? define(["exports", "react/jsx-runtime", "react", "@/integrations/supabase/client", "@/components/ui/button", "@/components/ui/card", "@/components/ui/input", "@/components/ui/label", "@/components/ui/switch", "@/components/ui/select", "@/components/ui/textarea", "@tanstack/react-query", "@supabase/supabase-js"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.NotificationSystem = {}, global["react/jsx-runtime"], global.React, global.client, global.button, global.card, global.input, global.label, global._switch, global.select, global.textarea, global.ReactQuery, global.Supabase));
-})(this, function(exports2, jsxRuntime, React, client, button, card, input, label, _switch, select, textarea, reactQuery, supabaseJs) {
+  typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("react/jsx-runtime"), require("react"), require("@/integrations/supabase/client"), require("@/components/ui/button"), require("@/components/ui/card"), require("@/components/ui/input"), require("@/components/ui/label"), require("@/components/ui/switch"), require("@/components/ui/select"), require("@/components/ui/textarea"), require("@tanstack/react-query"), require("@supabase/supabase-js")) : typeof define === "function" && define.amd ? define(["exports", "react/jsx-runtime", "react", "@/integrations/supabase/client", "@/components/ui/button", "@/components/ui/card", "@/components/ui/input", "@/components/ui/label", "@/components/ui/switch", "@/components/ui/select", "@/components/ui/textarea", "@tanstack/react-query", "@supabase/supabase-js"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.NotificationSystem = {}, global["react/jsx-runtime"], global.React, global.client, global.button, global.card, global.input, global.label, global._switch, global.select, global.textarea, global.ReactQuery));
+})(this, function(exports2, jsxRuntime, React, client, button, card, input, label, _switch, select, textarea, reactQuery) {
   "use strict";var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
@@ -337,7 +337,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             };
           }
         } else {
-          const supabaseUrl2 = "https://ufvingocbzegpgjknzhm.supabase.co";
+          const supabaseUrl = "https://ufvingocbzegpgjknzhm.supabase.co";
           const supabaseKey = void 0;
           if (!supabaseKey) {
             return {
@@ -345,7 +345,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               error: "Supabase client not provided and VITE_SUPABASE_ANON_KEY not configured"
             };
           }
-          const response = await fetch(`${supabaseUrl2}/functions/v1/send-email`, {
+          const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -1236,16 +1236,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     );
   };
-  var define_process_env_default = {};
-  const supabaseUrl = define_process_env_default.NEXT_PUBLIC_SUPABASE_URL || define_process_env_default.REACT_APP_SUPABASE_URL || "";
-  const supabaseAnonKey = define_process_env_default.NEXT_PUBLIC_SUPABASE_ANON_KEY || define_process_env_default.REACT_APP_SUPABASE_ANON_KEY || "";
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Supabase URL or Anon Key not found. Please configure your environment variables.");
-  }
-  const supabase = supabaseJs.createClient(supabaseUrl, supabaseAnonKey);
-  const configureSupabase = (url, anonKey) => {
-    return supabaseJs.createClient(url, anonKey);
-  };
+  const supabase = null;
   const useNotifications = (filters = {}) => {
     const queryClient = reactQuery.useQueryClient();
     const [unreadCount, setUnreadCount] = React.useState(0);
@@ -3663,9 +3654,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   exports2.NotificationCenter = NotificationCenter;
   exports2.NotificationItem = NotificationItem;
   exports2.NotificationSettings = NotificationSettings;
-  exports2.configureSupabase = configureSupabase;
   exports2.emailService = emailService;
-  exports2.supabase = supabase;
   exports2.useNotificationSettings = useNotificationSettings;
   exports2.useNotifications = useNotifications;
   Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
