@@ -2,7 +2,7 @@
   "name": "@raynsecure/staysecure-notifications",
   "version": "1.0.0",
   "description": "Reusable notification system for React applications with support for lessons, tasks, and reminders",
-  "main": "dist/index.js",
+  "main": "dist/index.umd.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "files": [
