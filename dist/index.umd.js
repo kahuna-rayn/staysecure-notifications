@@ -563,7 +563,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const mappedData = {
             userId: data.user_id,
             emailEnabled: data.email_enabled,
-            lessonReminders: data.lesson_reminders,
             taskDueDates: data.task_due_dates,
             systemAlerts: data.system_alerts,
             achievements: data.achievements,
@@ -578,7 +577,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const defaultPrefs = {
             userId: (user == null ? void 0 : user.id) || "",
             emailEnabled: true,
-            lessonReminders: true,
             taskDueDates: false,
             systemAlerts: false,
             achievements: true,
@@ -611,7 +609,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         user_id: user.id,
         // Always use current user ID
         email_enabled: updatedPrefs.emailEnabled,
-        lesson_reminders: updatedPrefs.lessonReminders,
         task_due_dates: updatedPrefs.taskDueDates,
         system_alerts: updatedPrefs.systemAlerts,
         achievements: updatedPrefs.achievements,
@@ -732,16 +729,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         (preferences == null ? void 0 : preferences.emailEnabled) && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntime.jsx("h4", { className: "font-medium", children: "Notification Types" }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3", children: [
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Lesson Reminders" }),
-              /* @__PURE__ */ jsxRuntime.jsx(
-                Switch,
-                {
-                  checked: (preferences == null ? void 0 : preferences.lessonReminders) || false,
-                  onCheckedChange: (checked) => updatePreferences({ lessonReminders: checked })
-                }
-              )
-            ] }),
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
               /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Task Due Dates" }),
               /* @__PURE__ */ jsxRuntime.jsx(

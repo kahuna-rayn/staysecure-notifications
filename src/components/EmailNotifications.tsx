@@ -35,7 +35,6 @@ interface EmailNotificationsProps {
 interface EmailPreferences {
   userId: string;
   emailEnabled: boolean;
-  lessonReminders: boolean;
   taskDueDates: boolean;
   systemAlerts: boolean;
   achievements: boolean;
@@ -109,7 +108,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
         const mappedData: EmailPreferences = {
           userId: data.user_id,
           emailEnabled: data.email_enabled,
-          lessonReminders: data.lesson_reminders,
           taskDueDates: data.task_due_dates,
           systemAlerts: data.system_alerts,
           achievements: data.achievements,
@@ -125,7 +123,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
         const defaultPrefs: EmailPreferences = {
           userId: user?.id || '',
           emailEnabled: true,
-          lessonReminders: true,
           taskDueDates: false,
           systemAlerts: false,
           achievements: true,
@@ -149,7 +146,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
     const dbPayload = {
       user_id: prefs.userId,
       email_enabled: prefs.emailEnabled,
-      lesson_reminders: prefs.lessonReminders,
       task_due_dates: prefs.taskDueDates,
       system_alerts: prefs.systemAlerts,
       achievements: prefs.achievements,
@@ -186,7 +182,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
     const dbPayload = {
       user_id: user.id, // Always use current user ID
       email_enabled: updatedPrefs.emailEnabled,
-      lesson_reminders: updatedPrefs.lessonReminders,
       task_due_dates: updatedPrefs.taskDueDates,
       system_alerts: updatedPrefs.systemAlerts,
       achievements: updatedPrefs.achievements,
@@ -335,14 +330,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
               <h4 className="font-medium">Notification Types</h4>
               
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-left">Lesson Reminders</Label>
-                  <Switch
-                    checked={preferences?.lessonReminders || false}
-                    onCheckedChange={(checked) => updatePreferences({ lessonReminders: checked })}
-                  />
-                </div>
-                
                 <div className="flex items-center justify-between">
                   <Label className="text-left">Task Due Dates</Label>
                   <Switch
