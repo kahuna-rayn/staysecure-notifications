@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Send } from 'lucide-react';
-import { emailService, EmailService } from '../lib/emailService';
+// import { emailService, EmailService } from '../lib/emailService';
 
 // These should be passed as props or configured externally
 interface EmailNotificationsProps {
@@ -75,7 +75,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   // Configure email service with AWS config
   useEffect(() => {
     if (awsConfig) {
-      EmailService.configure(awsConfig);
+      // EmailService.configure(awsConfig);
+      console.log('📧 AWS config received:', awsConfig);
     }
   }, [awsConfig]);
 
