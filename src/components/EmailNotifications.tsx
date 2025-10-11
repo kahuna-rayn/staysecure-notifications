@@ -64,8 +64,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   SelectValue,
   Textarea,
 }) => {
-  console.log('🎯 EmailNotifications component function called with props:', { user, supabase: !!supabase });
-  
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -80,7 +78,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
   // Load user preferences
   useEffect(() => {
-    console.log('🚀 EmailNotifications component mounted, user:', user);
     if (user) {
       loadPreferences();
     }
@@ -88,22 +85,18 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
   const loadPreferences = async () => {
     try {
-      console.log('🔍 Loading preferences for user:', user?.id);
       const { data, error } = await supabase
         .from('email_preferences')
         .select('*')
         .eq('user_id', user?.id)
         .single();
 
-      console.log('📊 Database response:', { data, error });
-
       if (error && error.code !== 'PGRST116') {
-        console.error('❌ Error loading preferences:', error);
+        console.error('Error loading preferences:', error);
         return;
       }
 
       if (data) {
-        console.log('✅ Found existing preferences:', data);
         // Map database columns to component interface
         const mappedData: EmailPreferences = {
           userId: data.user_id,
@@ -116,7 +109,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           quietHoursStart: data.quiet_hours_start_time,
           quietHoursEnd: data.quiet_hours_end_time,
         };
-        console.log('🔄 Mapped data:', mappedData);
         setPreferences(mappedData);
       } else {
         // Set default preferences in UI (don't save to DB yet)
@@ -131,7 +123,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           quietHoursStart: '22:00',
           quietHoursEnd: '08:00',
         };
-        console.log('📋 No existing preferences found, using defaults in UI only');
         setPreferences(defaultPrefs);
       }
     } catch (error) {
@@ -142,7 +133,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   };
 
   const createPreferences = async (prefs: EmailPreferences) => {
-    console.log('🆕 Creating/Upserting default preferences:', prefs);
     const dbPayload = {
       user_id: prefs.userId,
       email_enabled: prefs.emailEnabled,
@@ -154,29 +144,22 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       quiet_hours_start_time: prefs.quietHoursStart,
       quiet_hours_end_time: prefs.quietHoursEnd,
     };
-    console.log('💾 Upserting with payload:', dbPayload);
     
     const { error } = await supabase
       .from('email_preferences')
       .upsert(dbPayload, { onConflict: 'user_id' });
 
     if (error) {
-      console.error('❌ Error upserting preferences:', error);
-    } else {
-      console.log('✅ Successfully upserted default preferences');
+      console.error('Error upserting preferences:', error);
     }
   };
 
   const updatePreferences = async (updates: Partial<EmailPreferences>) => {
-    console.log('🔄 updatePreferences called with:', updates);
-    console.log('📝 Current preferences before update:', preferences);
-    
     const updatedPrefs = { 
       ...preferences, 
       ...updates, 
       userId: user.id // Always use current user ID
     };
-    console.log('✨ Updated preferences object:', updatedPrefs);
     setPreferences(updatedPrefs);
 
     const dbPayload = {
@@ -190,28 +173,19 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       quiet_hours_start_time: updatedPrefs.quietHoursStart,
       quiet_hours_end_time: updatedPrefs.quietHoursEnd,
     };
-    console.log('💾 Saving to database:', dbPayload);
 
     const { error } = await supabase
       .from('email_preferences')
       .upsert(dbPayload);
 
     if (error) {
-      console.error('❌ Error updating preferences:', error);
-    } else {
-      console.log('✅ Successfully saved preferences to database');
+      console.error('Error updating preferences:', error);
     }
   };
 
 
   const sendTestEmail = async () => {
-    console.log('Send test email clicked. User:', user);
-    console.log('AWS Config:', awsConfig ? {
-      lambdaUrl: awsConfig.lambdaUrl ? 'Configured' : 'Not configured',
-      fromEmail: awsConfig.fromEmail
-    } : 'Not provided');
     if (!user || !user.email) {
-      console.log('Missing user or email:', { user, email: user?.email });
       return;
     }
 

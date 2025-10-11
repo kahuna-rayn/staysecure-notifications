@@ -533,7 +533,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     SelectValue,
     Textarea
   }) => {
-    console.log("🎯 EmailNotifications component function called with props:", { user, supabase: !!supabase2 });
     const [preferences, setPreferences] = react.useState(null);
     const [loading, setLoading] = react.useState(true);
     const [sending, setSending] = react.useState(false);
@@ -544,22 +543,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }, [awsConfig]);
     react.useEffect(() => {
-      console.log("🚀 EmailNotifications component mounted, user:", user);
       if (user) {
         loadPreferences();
       }
     }, [user]);
     const loadPreferences = async () => {
       try {
-        console.log("🔍 Loading preferences for user:", user == null ? void 0 : user.id);
         const { data, error } = await supabase2.from("email_preferences").select("*").eq("user_id", user == null ? void 0 : user.id).single();
-        console.log("📊 Database response:", { data, error });
         if (error && error.code !== "PGRST116") {
-          console.error("❌ Error loading preferences:", error);
+          console.error("Error loading preferences:", error);
           return;
         }
         if (data) {
-          console.log("✅ Found existing preferences:", data);
           const mappedData = {
             userId: data.user_id,
             emailEnabled: data.email_enabled,
@@ -571,7 +566,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             quietHoursStart: data.quiet_hours_start_time,
             quietHoursEnd: data.quiet_hours_end_time
           };
-          console.log("🔄 Mapped data:", mappedData);
           setPreferences(mappedData);
         } else {
           const defaultPrefs = {
@@ -585,7 +579,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             quietHoursStart: "22:00",
             quietHoursEnd: "08:00"
           };
-          console.log("📋 No existing preferences found, using defaults in UI only");
           setPreferences(defaultPrefs);
         }
       } catch (error) {
@@ -595,15 +588,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     };
     const updatePreferences = async (updates) => {
-      console.log("🔄 updatePreferences called with:", updates);
-      console.log("📝 Current preferences before update:", preferences);
       const updatedPrefs = {
         ...preferences,
         ...updates,
         userId: user.id
         // Always use current user ID
       };
-      console.log("✨ Updated preferences object:", updatedPrefs);
       setPreferences(updatedPrefs);
       const dbPayload = {
         user_id: user.id,
@@ -617,22 +607,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         quiet_hours_start_time: updatedPrefs.quietHoursStart,
         quiet_hours_end_time: updatedPrefs.quietHoursEnd
       };
-      console.log("💾 Saving to database:", dbPayload);
       const { error } = await supabase2.from("email_preferences").upsert(dbPayload);
       if (error) {
-        console.error("❌ Error updating preferences:", error);
-      } else {
-        console.log("✅ Successfully saved preferences to database");
+        console.error("Error updating preferences:", error);
       }
     };
     const sendTestEmail = async () => {
-      console.log("Send test email clicked. User:", user);
-      console.log("AWS Config:", awsConfig ? {
-        lambdaUrl: awsConfig.lambdaUrl ? "Configured" : "Not configured",
-        fromEmail: awsConfig.fromEmail
-      } : "Not provided");
       if (!user || !user.email) {
-        console.log("Missing user or email:", { user, email: user == null ? void 0 : user.email });
         return;
       }
       setSending(true);
