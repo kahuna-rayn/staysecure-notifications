@@ -596,7 +596,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     };
     const createPreferences = async (prefs) => {
-      console.log("🆕 Creating default preferences:", prefs);
+      console.log("🆕 Creating/Upserting default preferences:", prefs);
       const dbPayload = {
         user_id: prefs.userId,
         email_enabled: prefs.emailEnabled,
@@ -609,12 +609,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         quiet_hours_start_time: prefs.quietHoursStart,
         quiet_hours_end_time: prefs.quietHoursEnd
       };
-      console.log("💾 Creating with payload:", dbPayload);
-      const { error } = await supabase2.from("email_preferences").insert(dbPayload);
+      console.log("💾 Upserting with payload:", dbPayload);
+      const { error } = await supabase2.from("email_preferences").upsert(dbPayload, { onConflict: "user_id" });
       if (error) {
-        console.error("❌ Error creating preferences:", error);
+        console.error("❌ Error upserting preferences:", error);
       } else {
-        console.log("✅ Successfully created default preferences");
+        console.log("✅ Successfully upserted default preferences");
       }
     };
     const updatePreferences = async (updates) => {

@@ -143,7 +143,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   };
 
   const createPreferences = async (prefs: EmailPreferences) => {
-    console.log('🆕 Creating default preferences:', prefs);
+    console.log('🆕 Creating/Upserting default preferences:', prefs);
     const dbPayload = {
       user_id: prefs.userId,
       email_enabled: prefs.emailEnabled,
@@ -156,16 +156,16 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       quiet_hours_start_time: prefs.quietHoursStart,
       quiet_hours_end_time: prefs.quietHoursEnd,
     };
-    console.log('💾 Creating with payload:', dbPayload);
+    console.log('💾 Upserting with payload:', dbPayload);
     
     const { error } = await supabase
       .from('email_preferences')
-      .insert(dbPayload);
+      .upsert(dbPayload, { onConflict: 'user_id' });
 
     if (error) {
-      console.error('❌ Error creating preferences:', error);
+      console.error('❌ Error upserting preferences:', error);
     } else {
-      console.log('✅ Successfully created default preferences');
+      console.log('✅ Successfully upserted default preferences');
     }
   };
 
