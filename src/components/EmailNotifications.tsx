@@ -79,6 +79,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
   // Load user preferences
   useEffect(() => {
+    console.log('🚀 EmailNotifications component mounted, user:', user);
     if (user) {
       loadPreferences();
     }
@@ -86,19 +87,37 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
   const loadPreferences = async () => {
     try {
+      console.log('🔍 Loading preferences for user:', user?.id);
       const { data, error } = await supabase
         .from('email_preferences')
         .select('*')
         .eq('user_id', user?.id)
         .single();
 
+      console.log('📊 Database response:', { data, error });
+
       if (error && error.code !== 'PGRST116') {
-        console.error('Error loading preferences:', error);
+        console.error('❌ Error loading preferences:', error);
         return;
       }
 
       if (data) {
-        setPreferences(data);
+        console.log('✅ Found existing preferences:', data);
+        // Map database columns to component interface
+        const mappedData: EmailPreferences = {
+          userId: data.user_id,
+          emailEnabled: data.email_enabled,
+          lessonReminders: data.lesson_reminders,
+          taskDueDates: data.task_due_dates,
+          systemAlerts: data.system_alerts,
+          achievements: data.achievements,
+          courseCompletions: data.course_completions,
+          quietHoursEnabled: data.quiet_hours_enabled,
+          quietHoursStart: data.quiet_hours_start_time,
+          quietHoursEnd: data.quiet_hours_end_time,
+        };
+        console.log('🔄 Mapped data:', mappedData);
+        setPreferences(mappedData);
       } else {
         // Create default preferences
         const defaultPrefs: EmailPreferences = {
@@ -124,53 +143,66 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   };
 
   const createPreferences = async (prefs: EmailPreferences) => {
+    console.log('🆕 Creating default preferences:', prefs);
+    const dbPayload = {
+      user_id: prefs.userId,
+      email_enabled: prefs.emailEnabled,
+      lesson_reminders: prefs.lessonReminders,
+      task_due_dates: prefs.taskDueDates,
+      system_alerts: prefs.systemAlerts,
+      achievements: prefs.achievements,
+      course_completions: prefs.courseCompletions,
+      quiet_hours_enabled: prefs.quietHoursEnabled,
+      quiet_hours_start_time: prefs.quietHoursStart,
+      quiet_hours_end_time: prefs.quietHoursEnd,
+    };
+    console.log('💾 Creating with payload:', dbPayload);
+    
     const { error } = await supabase
       .from('email_preferences')
-      .insert({
-        user_id: prefs.userId,
-        email_enabled: prefs.emailEnabled,
-        lesson_reminders: prefs.lessonReminders,
-        task_due_dates: prefs.taskDueDates,
-        system_alerts: prefs.systemAlerts,
-        achievements: prefs.achievements,
-        course_completions: prefs.courseCompletions,
-        quiet_hours_enabled: prefs.quietHoursEnabled,
-        quiet_hours_start: prefs.quietHoursStart,
-        quiet_hours_end: prefs.quietHoursEnd,
-      });
+      .insert(dbPayload);
 
     if (error) {
-      console.error('Error creating preferences:', error);
+      console.error('❌ Error creating preferences:', error);
+    } else {
+      console.log('✅ Successfully created default preferences');
     }
   };
 
   const updatePreferences = async (updates: Partial<EmailPreferences>) => {
+    console.log('🔄 updatePreferences called with:', updates);
+    console.log('📝 Current preferences before update:', preferences);
+    
     const updatedPrefs = { 
       ...preferences, 
       ...updates, 
       userId: user.id // Always use current user ID
     };
+    console.log('✨ Updated preferences object:', updatedPrefs);
     setPreferences(updatedPrefs);
 
-
+    const dbPayload = {
+      user_id: user.id, // Always use current user ID
+      email_enabled: updatedPrefs.emailEnabled,
+      lesson_reminders: updatedPrefs.lessonReminders,
+      task_due_dates: updatedPrefs.taskDueDates,
+      system_alerts: updatedPrefs.systemAlerts,
+      achievements: updatedPrefs.achievements,
+      course_completions: updatedPrefs.courseCompletions,
+      quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
+      quiet_hours_start_time: updatedPrefs.quietHoursStart,
+      quiet_hours_end_time: updatedPrefs.quietHoursEnd,
+    };
+    console.log('💾 Saving to database:', dbPayload);
 
     const { error } = await supabase
       .from('email_preferences')
-      .upsert({
-        user_id: user.id, // Always use current user ID
-        email_enabled: updatedPrefs.emailEnabled,
-        lesson_reminders: updatedPrefs.lessonReminders,
-        task_due_dates: updatedPrefs.taskDueDates,
-        system_alerts: updatedPrefs.systemAlerts,
-        achievements: updatedPrefs.achievements,
-        course_completions: updatedPrefs.courseCompletions,
-        quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
-        quiet_hours_start: updatedPrefs.quietHoursStart,
-        quiet_hours_end: updatedPrefs.quietHoursEnd,
-      });
+      .upsert(dbPayload);
 
     if (error) {
-      console.error('Error updating preferences:', error);
+      console.error('❌ Error updating preferences:', error);
+    } else {
+      console.log('✅ Successfully saved preferences to database');
     }
   };
 
