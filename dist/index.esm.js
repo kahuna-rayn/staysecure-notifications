@@ -578,7 +578,7 @@ const EmailNotifications = ({
           userId: (user == null ? void 0 : user.id) || "",
           emailEnabled: true,
           lessonReminders: true,
-          taskDueDates: true,
+          taskDueDates: false,
           systemAlerts: false,
           achievements: true,
           courseCompletions: true,
@@ -586,35 +586,13 @@ const EmailNotifications = ({
           quietHoursStart: "22:00",
           quietHoursEnd: "08:00"
         };
-        await createPreferences(defaultPrefs);
+        console.log("📋 No existing preferences found, using defaults in UI only");
         setPreferences(defaultPrefs);
       }
     } catch (error) {
       console.error("Error loading preferences:", error);
     } finally {
       setLoading(false);
-    }
-  };
-  const createPreferences = async (prefs) => {
-    console.log("🆕 Creating/Upserting default preferences:", prefs);
-    const dbPayload = {
-      user_id: prefs.userId,
-      email_enabled: prefs.emailEnabled,
-      lesson_reminders: prefs.lessonReminders,
-      task_due_dates: prefs.taskDueDates,
-      system_alerts: prefs.systemAlerts,
-      achievements: prefs.achievements,
-      course_completions: prefs.courseCompletions,
-      quiet_hours_enabled: prefs.quietHoursEnabled,
-      quiet_hours_start_time: prefs.quietHoursStart,
-      quiet_hours_end_time: prefs.quietHoursEnd
-    };
-    console.log("💾 Upserting with payload:", dbPayload);
-    const { error } = await supabase2.from("email_preferences").upsert(dbPayload, { onConflict: "user_id" });
-    if (error) {
-      console.error("❌ Error upserting preferences:", error);
-    } else {
-      console.log("✅ Successfully upserted default preferences");
     }
   };
   const updatePreferences = async (updates) => {

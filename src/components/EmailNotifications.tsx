@@ -119,12 +119,12 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
         console.log('🔄 Mapped data:', mappedData);
         setPreferences(mappedData);
       } else {
-        // Create default preferences
+        // Set default preferences in UI (don't save to DB yet)
         const defaultPrefs: EmailPreferences = {
           userId: user?.id || '',
           emailEnabled: true,
           lessonReminders: true,
-          taskDueDates: true,
+          taskDueDates: false,
           systemAlerts: false,
           achievements: true,
           courseCompletions: true,
@@ -132,7 +132,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           quietHoursStart: '22:00',
           quietHoursEnd: '08:00',
         };
-        await createPreferences(defaultPrefs);
+        console.log('📋 No existing preferences found, using defaults in UI only');
         setPreferences(defaultPrefs);
       }
     } catch (error) {
