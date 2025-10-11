@@ -533,6 +533,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     SelectValue,
     Textarea
   }) => {
+    console.log("🎯 EmailNotifications component function called with props:", { user, supabase: !!supabase2 });
     const [preferences, setPreferences] = react.useState(null);
     const [loading, setLoading] = react.useState(true);
     const [sending, setSending] = react.useState(false);

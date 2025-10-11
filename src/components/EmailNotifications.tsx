@@ -65,6 +65,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   SelectValue,
   Textarea,
 }) => {
+  console.log('🎯 EmailNotifications component function called with props:', { user, supabase: !!supabase });
+  
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);

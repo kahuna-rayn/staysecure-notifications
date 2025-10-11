@@ -533,6 +533,7 @@ const EmailNotifications = ({
   SelectValue,
   Textarea
 }) => {
+  console.log("🎯 EmailNotifications component function called with props:", { user, supabase: !!supabase2 });
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
