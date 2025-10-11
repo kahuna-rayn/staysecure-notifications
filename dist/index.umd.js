@@ -1,6 +1,6 @@
 (function(global, factory) {
-  typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("react/jsx-runtime"), require("react"), require("@/integrations/supabase/client"), require("@/components/ui/button"), require("@/components/ui/card"), require("@/components/ui/input"), require("@/components/ui/label"), require("@/components/ui/switch"), require("@/components/ui/select"), require("@/components/ui/textarea"), require("@tanstack/react-query"), require("@supabase/supabase-js")) : typeof define === "function" && define.amd ? define(["exports", "react/jsx-runtime", "react", "@/integrations/supabase/client", "@/components/ui/button", "@/components/ui/card", "@/components/ui/input", "@/components/ui/label", "@/components/ui/switch", "@/components/ui/select", "@/components/ui/textarea", "@tanstack/react-query", "@supabase/supabase-js"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.NotificationSystem = {}, global["react/jsx-runtime"], global.React, global.client, global.button, global.card, global.input, global.label, global._switch, global.select, global.textarea, global.ReactQuery));
-})(this, function(exports2, jsxRuntime, React, client, button, card, input, label, _switch, select, textarea, reactQuery) {
+  typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("react/jsx-runtime"), require("react"), require("@tanstack/react-query"), require("@supabase/supabase-js")) : typeof define === "function" && define.amd ? define(["exports", "react/jsx-runtime", "react", "@tanstack/react-query", "@supabase/supabase-js"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.NotificationSystem = {}, global["react/jsx-runtime"], global.React, global.ReactQuery));
+})(this, function(exports2, jsxRuntime, react, reactQuery) {
   "use strict";var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
@@ -38,7 +38,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    * This source code is licensed under the ISC license.
    * See the LICENSE file in the root directory of this source tree.
    */
-  const Icon = React.forwardRef(
+  const Icon = react.forwardRef(
     ({
       color = "currentColor",
       size = 24,
@@ -49,7 +49,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       iconNode,
       ...rest
     }, ref) => {
-      return React.createElement(
+      return react.createElement(
         "svg",
         {
           ref,
@@ -62,7 +62,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ...rest
         },
         [
-          ...iconNode.map(([tag, attrs]) => React.createElement(tag, attrs)),
+          ...iconNode.map(([tag, attrs]) => react.createElement(tag, attrs)),
           ...Array.isArray(children) ? children : [children]
         ]
       );
@@ -75,8 +75,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    * See the LICENSE file in the root directory of this source tree.
    */
   const createLucideIcon = (iconName, iconNode) => {
-    const Component = React.forwardRef(
-      ({ className, ...props }, ref) => React.createElement(Icon, {
+    const Component = react.forwardRef(
+      ({ className, ...props }, ref) => react.createElement(Icon, {
         ref,
         iconNode,
         className: mergeClasses(`lucide-${toKebabCase(iconName)}`, className),
@@ -513,11 +513,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   __publicField(_EmailService, "instance");
   let EmailService = _EmailService;
   const emailService = EmailService.getInstance();
-  const emailService$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-    __proto__: null,
-    EmailService,
-    emailService
-  }, Symbol.toStringTag, { value: "Module" }));
   const EmailNotifications = ({
     supabase: supabase2,
     user,
@@ -538,29 +533,46 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     SelectValue,
     Textarea
   }) => {
-    const [preferences, setPreferences] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
-    const [sending, setSending] = React.useState(false);
-    const [testEmailType, setTestEmailType] = React.useState("system_alert");
-    React.useEffect(() => {
+    const [preferences, setPreferences] = react.useState(null);
+    const [loading, setLoading] = react.useState(true);
+    const [sending, setSending] = react.useState(false);
+    const [testEmailType, setTestEmailType] = react.useState("system_alert");
+    react.useEffect(() => {
       if (awsConfig) {
         EmailService.configure(awsConfig);
       }
     }, [awsConfig]);
-    React.useEffect(() => {
+    react.useEffect(() => {
+      console.log("🚀 EmailNotifications component mounted, user:", user);
       if (user) {
         loadPreferences();
       }
     }, [user]);
     const loadPreferences = async () => {
       try {
+        console.log("🔍 Loading preferences for user:", user == null ? void 0 : user.id);
         const { data, error } = await supabase2.from("email_preferences").select("*").eq("user_id", user == null ? void 0 : user.id).single();
+        console.log("📊 Database response:", { data, error });
         if (error && error.code !== "PGRST116") {
-          console.error("Error loading preferences:", error);
+          console.error("❌ Error loading preferences:", error);
           return;
         }
         if (data) {
-          setPreferences(data);
+          console.log("✅ Found existing preferences:", data);
+          const mappedData = {
+            userId: data.user_id,
+            emailEnabled: data.email_enabled,
+            lessonReminders: data.lesson_reminders,
+            taskDueDates: data.task_due_dates,
+            systemAlerts: data.system_alerts,
+            achievements: data.achievements,
+            courseCompletions: data.course_completions,
+            quietHoursEnabled: data.quiet_hours_enabled,
+            quietHoursStart: data.quiet_hours_start_time,
+            quietHoursEnd: data.quiet_hours_end_time
+          };
+          console.log("🔄 Mapped data:", mappedData);
+          setPreferences(mappedData);
         } else {
           const defaultPrefs = {
             userId: (user == null ? void 0 : user.id) || "",
@@ -584,7 +596,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     };
     const createPreferences = async (prefs) => {
-      const { error } = await supabase2.from("email_preferences").insert({
+      console.log("🆕 Creating default preferences:", prefs);
+      const dbPayload = {
         user_id: prefs.userId,
         email_enabled: prefs.emailEnabled,
         lesson_reminders: prefs.lessonReminders,
@@ -593,22 +606,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         achievements: prefs.achievements,
         course_completions: prefs.courseCompletions,
         quiet_hours_enabled: prefs.quietHoursEnabled,
-        quiet_hours_start: prefs.quietHoursStart,
-        quiet_hours_end: prefs.quietHoursEnd
-      });
+        quiet_hours_start_time: prefs.quietHoursStart,
+        quiet_hours_end_time: prefs.quietHoursEnd
+      };
+      console.log("💾 Creating with payload:", dbPayload);
+      const { error } = await supabase2.from("email_preferences").insert(dbPayload);
       if (error) {
-        console.error("Error creating preferences:", error);
+        console.error("❌ Error creating preferences:", error);
+      } else {
+        console.log("✅ Successfully created default preferences");
       }
     };
     const updatePreferences = async (updates) => {
+      console.log("🔄 updatePreferences called with:", updates);
+      console.log("📝 Current preferences before update:", preferences);
       const updatedPrefs = {
         ...preferences,
         ...updates,
         userId: user.id
         // Always use current user ID
       };
+      console.log("✨ Updated preferences object:", updatedPrefs);
       setPreferences(updatedPrefs);
-      const { error } = await supabase2.from("email_preferences").upsert({
+      const dbPayload = {
         user_id: user.id,
         // Always use current user ID
         email_enabled: updatedPrefs.emailEnabled,
@@ -618,11 +638,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         achievements: updatedPrefs.achievements,
         course_completions: updatedPrefs.courseCompletions,
         quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
-        quiet_hours_start: updatedPrefs.quietHoursStart,
-        quiet_hours_end: updatedPrefs.quietHoursEnd
-      });
+        quiet_hours_start_time: updatedPrefs.quietHoursStart,
+        quiet_hours_end_time: updatedPrefs.quietHoursEnd
+      };
+      console.log("💾 Saving to database:", dbPayload);
+      const { error } = await supabase2.from("email_preferences").upsert(dbPayload);
       if (error) {
-        console.error("Error updating preferences:", error);
+        console.error("❌ Error updating preferences:", error);
+      } else {
+        console.log("✅ Successfully saved preferences to database");
       }
     };
     const sendTestEmail = async () => {
@@ -853,67 +877,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       ] })
     ] });
   };
-  const EmailNotificationsWrapper = ({ useAuth, baseUrl, clientPath }) => {
-    const { user } = useAuth();
-    React.useEffect(() => {
-      if (baseUrl) {
-        Promise.resolve().then(() => emailService$1).then(({ EmailService: EmailService2 }) => {
-          EmailService2.configure({
-            lambdaUrl: "",
-            // Will be set by consuming app's Supabase Edge Function
-            baseUrl,
-            fromEmail: void 0
-            // Will use default from EmailService
-          });
-        });
-      }
-    }, [baseUrl]);
-    const [userProfile, setUserProfile] = React.useState(null);
-    React.useEffect(() => {
-      const getProfile = async () => {
-        if (user == null ? void 0 : user.id) {
-          const { data: { user: authUser } } = await client.supabase.auth.getUser();
-          const { data, error } = await client.supabase.from("profiles").select("*").eq("id", user.id).single();
-          if (!error && data) {
-            setUserProfile(data);
-          }
-        }
-      };
-      getProfile();
-    }, [user]);
-    if (!user || !userProfile) {
-      return /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center justify-center p-8", children: /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-muted-foreground", children: "Please log in to access email notifications." }) });
-    }
-    return /* @__PURE__ */ jsxRuntime.jsx(
-      EmailNotifications,
-      {
-        supabase: client.supabase,
-        user: {
-          id: (userProfile == null ? void 0 : userProfile.id) || (user == null ? void 0 : user.id),
-          email: (user == null ? void 0 : user.email) || (userProfile == null ? void 0 : userProfile.email)
-        },
-        awsConfig: {
-          lambdaUrl: "",
-          fromEmail: "kahuna@raynsecure.com"
-        },
-        Button: button.Button,
-        Card: card.Card,
-        CardContent: card.CardContent,
-        CardDescription: card.CardDescription,
-        CardHeader: card.CardHeader,
-        CardTitle: card.CardTitle,
-        Input: input.Input,
-        Label: label.Label,
-        Switch: _switch.Switch,
-        Select: select.Select,
-        SelectContent: select.SelectContent,
-        SelectItem: select.SelectItem,
-        SelectTrigger: select.SelectTrigger,
-        SelectValue: select.SelectValue,
-        Textarea: textarea.Textarea
-      }
-    );
-  };
   const LessonReminderSettings = ({
     supabase: supabase2,
     Card = "div",
@@ -928,7 +891,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Alert = "div",
     AlertDescription = "p"
   }) => {
-    const [settings, setSettings] = React.useState({
+    const [settings, setSettings] = react.useState({
       enabled: true,
       reminder_days_before: 1,
       reminder_time: "09:00:00",
@@ -937,12 +900,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       max_reminder_attempts: 3,
       reminder_frequency_days: 7
     });
-    const [loading, setLoading] = React.useState(true);
-    const [saving, setSaving] = React.useState(false);
-    const [error, setError] = React.useState(null);
-    const [success, setSuccess] = React.useState(false);
-    const [testingReminders, setTestingReminders] = React.useState(false);
-    React.useEffect(() => {
+    const [loading, setLoading] = react.useState(true);
+    const [saving, setSaving] = react.useState(false);
+    const [error, setError] = react.useState(null);
+    const [success, setSuccess] = react.useState(false);
+    const [testingReminders, setTestingReminders] = react.useState(false);
+    react.useEffect(() => {
       loadSettings();
     }, []);
     const loadSettings = async () => {
@@ -1277,7 +1240,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const supabase = null;
   const useNotifications = (filters = {}) => {
     const queryClient = reactQuery.useQueryClient();
-    const [unreadCount, setUnreadCount] = React.useState(0);
+    const [unreadCount, setUnreadCount] = react.useState(0);
     const {
       data: notifications = [],
       isLoading,
@@ -1342,7 +1305,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       refetchInterval: 1e4
       // Refetch every 10 seconds
     });
-    React.useEffect(() => {
+    react.useEffect(() => {
       if (unreadData !== void 0) {
         setUnreadCount(unreadData);
       }
@@ -1390,16 +1353,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
       }
     });
-    const markAsRead = React.useCallback(async (id) => {
+    const markAsRead = react.useCallback(async (id) => {
       await markAsReadMutation.mutateAsync(id);
     }, [markAsReadMutation]);
-    const markAllAsRead = React.useCallback(async () => {
+    const markAllAsRead = react.useCallback(async () => {
       await markAllAsReadMutation.mutateAsync();
     }, [markAllAsReadMutation]);
-    const deleteNotification = React.useCallback(async (id) => {
+    const deleteNotification = react.useCallback(async (id) => {
       await deleteNotificationMutation.mutateAsync(id);
     }, [deleteNotificationMutation]);
-    const refresh = React.useCallback(() => {
+    const refresh = react.useCallback(() => {
       refetch();
     }, [refetch]);
     return {
@@ -2838,14 +2801,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function isProtectedWeekYearToken(token) {
     return weekYearTokenRE.test(token);
   }
-  function warnOrThrowProtectedError(token, format2, input2) {
-    const _message = message(token, format2, input2);
+  function warnOrThrowProtectedError(token, format2, input) {
+    const _message = message(token, format2, input);
     console.warn(_message);
     if (throwTokens.includes(token)) throw new RangeError(_message);
   }
-  function message(token, format2, input2) {
+  function message(token, format2, input) {
     const subject = token[0] === "Y" ? "years" : "days of the month";
-    return `Use \`${token.toLowerCase()}\` instead of \`${token}\` (in \`${format2}\`) for formatting ${subject} to the input \`${input2}\`; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md`;
+    return `Use \`${token.toLowerCase()}\` instead of \`${token}\` (in \`${format2}\`) for formatting ${subject} to the input \`${input}\`; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md`;
   }
   const formattingTokensRegExp = /[yYQqMLwIdDecihHKkms]o|(\w)\1*|''|'(''|[^'])+('|$)|./g;
   const longFormattingTokensRegExp = /P+p+|P+|p+|''|'(''|[^'])+('|$)|./g;
@@ -2905,10 +2868,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return formatter(originalDate, token, locale.localize, formatterOptions);
     }).join("");
   }
-  function cleanEscapedString(input2) {
-    const matched = input2.match(escapedStringRegExp);
+  function cleanEscapedString(input) {
+    const matched = input.match(escapedStringRegExp);
     if (!matched) {
-      return input2;
+      return input;
     }
     return matched[1].replace(doubleQuoteRegExp, "'");
   }
@@ -3251,7 +3214,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       updatePreferences,
       updateTypePreference
     } = useNotificationSettings(userId);
-    const [isExpanded, setIsExpanded] = React.useState(false);
+    const [isExpanded, setIsExpanded] = react.useState(false);
     if (isLoading) {
       return /* @__PURE__ */ jsxRuntime.jsx("div", { className: `p-4 ${className}`, children: /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-center text-gray-500", children: "Loading settings..." }) });
     }
@@ -3496,9 +3459,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     className = "",
     maxNotifications = 50
   }) => {
-    const [isOpen, setIsOpen] = React.useState(false);
-    const [showSettings, setShowSettings] = React.useState(false);
-    const [filters, setFilters] = React.useState({
+    const [isOpen, setIsOpen] = react.useState(false);
+    const [showSettings, setShowSettings] = react.useState(false);
+    const [filters, setFilters] = react.useState({
       userId,
       unreadOnly: false,
       limit: maxNotifications
@@ -3684,7 +3647,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     ] });
   };
   exports2.EmailNotifications = EmailNotifications;
-  exports2.EmailNotificationsWrapper = EmailNotificationsWrapper;
   exports2.EmailService = EmailService;
   exports2.LessonReminderSettings = LessonReminderSettings;
   exports2.LessonReminderSettingsPage = LessonReminderSettingsPage;

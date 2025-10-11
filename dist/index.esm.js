@@ -2,15 +2,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import { jsx, jsxs } from "react/jsx-runtime";
-import React, { forwardRef, createElement, useState, useEffect, useCallback } from "react";
-import { supabase as supabase$1 } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { CardTitle, CardHeader, CardDescription, CardContent, Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { SelectValue, SelectTrigger, SelectItem, SelectContent, Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { forwardRef, createElement, useState, useEffect, useCallback } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import "@supabase/supabase-js";
 /**
@@ -521,30 +513,25 @@ const _EmailService = class _EmailService {
 __publicField(_EmailService, "instance");
 let EmailService = _EmailService;
 const emailService = EmailService.getInstance();
-const emailService$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  EmailService,
-  emailService
-}, Symbol.toStringTag, { value: "Module" }));
 const EmailNotifications = ({
   supabase: supabase2,
   user,
   awsConfig,
-  Button: Button2,
-  Card: Card2,
-  CardContent: CardContent2,
-  CardDescription: CardDescription2,
-  CardHeader: CardHeader2,
-  CardTitle: CardTitle2,
-  Input: Input2,
-  Label: Label2,
-  Switch: Switch2,
-  Select: Select2,
-  SelectContent: SelectContent2,
-  SelectItem: SelectItem2,
-  SelectTrigger: SelectTrigger2,
-  SelectValue: SelectValue2,
-  Textarea: Textarea2
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea
 }) => {
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -556,19 +543,36 @@ const EmailNotifications = ({
     }
   }, [awsConfig]);
   useEffect(() => {
+    console.log("🚀 EmailNotifications component mounted, user:", user);
     if (user) {
       loadPreferences();
     }
   }, [user]);
   const loadPreferences = async () => {
     try {
+      console.log("🔍 Loading preferences for user:", user == null ? void 0 : user.id);
       const { data, error } = await supabase2.from("email_preferences").select("*").eq("user_id", user == null ? void 0 : user.id).single();
+      console.log("📊 Database response:", { data, error });
       if (error && error.code !== "PGRST116") {
-        console.error("Error loading preferences:", error);
+        console.error("❌ Error loading preferences:", error);
         return;
       }
       if (data) {
-        setPreferences(data);
+        console.log("✅ Found existing preferences:", data);
+        const mappedData = {
+          userId: data.user_id,
+          emailEnabled: data.email_enabled,
+          lessonReminders: data.lesson_reminders,
+          taskDueDates: data.task_due_dates,
+          systemAlerts: data.system_alerts,
+          achievements: data.achievements,
+          courseCompletions: data.course_completions,
+          quietHoursEnabled: data.quiet_hours_enabled,
+          quietHoursStart: data.quiet_hours_start_time,
+          quietHoursEnd: data.quiet_hours_end_time
+        };
+        console.log("🔄 Mapped data:", mappedData);
+        setPreferences(mappedData);
       } else {
         const defaultPrefs = {
           userId: (user == null ? void 0 : user.id) || "",
@@ -592,7 +596,8 @@ const EmailNotifications = ({
     }
   };
   const createPreferences = async (prefs) => {
-    const { error } = await supabase2.from("email_preferences").insert({
+    console.log("🆕 Creating default preferences:", prefs);
+    const dbPayload = {
       user_id: prefs.userId,
       email_enabled: prefs.emailEnabled,
       lesson_reminders: prefs.lessonReminders,
@@ -601,22 +606,29 @@ const EmailNotifications = ({
       achievements: prefs.achievements,
       course_completions: prefs.courseCompletions,
       quiet_hours_enabled: prefs.quietHoursEnabled,
-      quiet_hours_start: prefs.quietHoursStart,
-      quiet_hours_end: prefs.quietHoursEnd
-    });
+      quiet_hours_start_time: prefs.quietHoursStart,
+      quiet_hours_end_time: prefs.quietHoursEnd
+    };
+    console.log("💾 Creating with payload:", dbPayload);
+    const { error } = await supabase2.from("email_preferences").insert(dbPayload);
     if (error) {
-      console.error("Error creating preferences:", error);
+      console.error("❌ Error creating preferences:", error);
+    } else {
+      console.log("✅ Successfully created default preferences");
     }
   };
   const updatePreferences = async (updates) => {
+    console.log("🔄 updatePreferences called with:", updates);
+    console.log("📝 Current preferences before update:", preferences);
     const updatedPrefs = {
       ...preferences,
       ...updates,
       userId: user.id
       // Always use current user ID
     };
+    console.log("✨ Updated preferences object:", updatedPrefs);
     setPreferences(updatedPrefs);
-    const { error } = await supabase2.from("email_preferences").upsert({
+    const dbPayload = {
       user_id: user.id,
       // Always use current user ID
       email_enabled: updatedPrefs.emailEnabled,
@@ -626,11 +638,15 @@ const EmailNotifications = ({
       achievements: updatedPrefs.achievements,
       course_completions: updatedPrefs.courseCompletions,
       quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
-      quiet_hours_start: updatedPrefs.quietHoursStart,
-      quiet_hours_end: updatedPrefs.quietHoursEnd
-    });
+      quiet_hours_start_time: updatedPrefs.quietHoursStart,
+      quiet_hours_end_time: updatedPrefs.quietHoursEnd
+    };
+    console.log("💾 Saving to database:", dbPayload);
+    const { error } = await supabase2.from("email_preferences").upsert(dbPayload);
     if (error) {
-      console.error("Error updating preferences:", error);
+      console.error("❌ Error updating preferences:", error);
+    } else {
+      console.log("✅ Successfully saved preferences to database");
     }
   };
   const sendTestEmail = async () => {
@@ -722,11 +738,11 @@ const EmailNotifications = ({
     /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ jsxs("div", { className: "text-left", children: [
-          /* @__PURE__ */ jsx(Label2, { htmlFor: "email-enabled", children: "Enable Email Notifications" }),
+          /* @__PURE__ */ jsx(Label, { htmlFor: "email-enabled", children: "Enable Email Notifications" }),
           /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground", children: "Receive notifications via email" })
         ] }),
         /* @__PURE__ */ jsx(
-          Switch2,
+          Switch,
           {
             id: "email-enabled",
             checked: (preferences == null ? void 0 : preferences.emailEnabled) || false,
@@ -738,9 +754,9 @@ const EmailNotifications = ({
         /* @__PURE__ */ jsx("h4", { className: "font-medium", children: "Notification Types" }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label2, { className: "text-left", children: "Lesson Reminders" }),
+            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Lesson Reminders" }),
             /* @__PURE__ */ jsx(
-              Switch2,
+              Switch,
               {
                 checked: (preferences == null ? void 0 : preferences.lessonReminders) || false,
                 onCheckedChange: (checked) => updatePreferences({ lessonReminders: checked })
@@ -748,9 +764,9 @@ const EmailNotifications = ({
             )
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label2, { className: "text-left", children: "Task Due Dates" }),
+            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Task Due Dates" }),
             /* @__PURE__ */ jsx(
-              Switch2,
+              Switch,
               {
                 checked: (preferences == null ? void 0 : preferences.taskDueDates) || false,
                 onCheckedChange: (checked) => updatePreferences({ taskDueDates: checked })
@@ -758,9 +774,9 @@ const EmailNotifications = ({
             )
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label2, { className: "text-left", children: "System Alerts" }),
+            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "System Alerts" }),
             /* @__PURE__ */ jsx(
-              Switch2,
+              Switch,
               {
                 checked: (preferences == null ? void 0 : preferences.systemAlerts) || false,
                 onCheckedChange: (checked) => updatePreferences({ systemAlerts: checked })
@@ -768,9 +784,9 @@ const EmailNotifications = ({
             )
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label2, { className: "text-left", children: "Achievements" }),
+            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Achievements" }),
             /* @__PURE__ */ jsx(
-              Switch2,
+              Switch,
               {
                 checked: (preferences == null ? void 0 : preferences.achievements) || false,
                 onCheckedChange: (checked) => updatePreferences({ achievements: checked })
@@ -778,9 +794,9 @@ const EmailNotifications = ({
             )
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label2, { className: "text-left", children: "Course Completions" }),
+            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Course Completions" }),
             /* @__PURE__ */ jsx(
-              Switch2,
+              Switch,
               {
                 checked: (preferences == null ? void 0 : preferences.courseCompletions) || false,
                 onCheckedChange: (checked) => updatePreferences({ courseCompletions: checked })
@@ -792,11 +808,11 @@ const EmailNotifications = ({
       /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
           /* @__PURE__ */ jsxs("div", { className: "text-left", children: [
-            /* @__PURE__ */ jsx(Label2, { children: "Quiet Hours" }),
+            /* @__PURE__ */ jsx(Label, { children: "Quiet Hours" }),
             /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground", children: "Don't send emails during these hours" })
           ] }),
           /* @__PURE__ */ jsx(
-            Switch2,
+            Switch,
             {
               checked: (preferences == null ? void 0 : preferences.quietHoursEnabled) || false,
               onCheckedChange: (checked) => updatePreferences({ quietHoursEnabled: checked })
@@ -805,9 +821,9 @@ const EmailNotifications = ({
         ] }),
         (preferences == null ? void 0 : preferences.quietHoursEnabled) && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4", children: [
           /* @__PURE__ */ jsxs("div", { children: [
-            /* @__PURE__ */ jsx(Label2, { children: "Start Time" }),
+            /* @__PURE__ */ jsx(Label, { children: "Start Time" }),
             /* @__PURE__ */ jsx(
-              Input2,
+              Input,
               {
                 type: "time",
                 value: (preferences == null ? void 0 : preferences.quietHoursStart) || "22:00",
@@ -816,9 +832,9 @@ const EmailNotifications = ({
             )
           ] }),
           /* @__PURE__ */ jsxs("div", { children: [
-            /* @__PURE__ */ jsx(Label2, { children: "End Time" }),
+            /* @__PURE__ */ jsx(Label, { children: "End Time" }),
             /* @__PURE__ */ jsx(
-              Input2,
+              Input,
               {
                 type: "time",
                 value: (preferences == null ? void 0 : preferences.quietHoursEnd) || "08:00",
@@ -832,20 +848,20 @@ const EmailNotifications = ({
         /* @__PURE__ */ jsx("h4", { className: "font-medium", children: "Test Email Notifications" }),
         /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex-1", children: [
-            /* @__PURE__ */ jsx(Label2, { children: "Email Type" }),
-            /* @__PURE__ */ jsxs(Select2, { value: testEmailType, onValueChange: setTestEmailType, children: [
-              /* @__PURE__ */ jsx(SelectTrigger2, { children: /* @__PURE__ */ jsx(SelectValue2, {}) }),
-              /* @__PURE__ */ jsxs(SelectContent2, { children: [
-                /* @__PURE__ */ jsx(SelectItem2, { value: "system_alert", children: "System Alert" }),
-                /* @__PURE__ */ jsx(SelectItem2, { value: "lesson_reminder", children: "Lesson Reminder" }),
-                /* @__PURE__ */ jsx(SelectItem2, { value: "task_due", children: "Task Due Date" }),
-                /* @__PURE__ */ jsx(SelectItem2, { value: "achievement", children: "Achievement" }),
-                /* @__PURE__ */ jsx(SelectItem2, { value: "course_completion", children: "Course Completion" })
+            /* @__PURE__ */ jsx(Label, { children: "Email Type" }),
+            /* @__PURE__ */ jsxs(Select, { value: testEmailType, onValueChange: setTestEmailType, children: [
+              /* @__PURE__ */ jsx(SelectTrigger, { children: /* @__PURE__ */ jsx(SelectValue, {}) }),
+              /* @__PURE__ */ jsxs(SelectContent, { children: [
+                /* @__PURE__ */ jsx(SelectItem, { value: "system_alert", children: "System Alert" }),
+                /* @__PURE__ */ jsx(SelectItem, { value: "lesson_reminder", children: "Lesson Reminder" }),
+                /* @__PURE__ */ jsx(SelectItem, { value: "task_due", children: "Task Due Date" }),
+                /* @__PURE__ */ jsx(SelectItem, { value: "achievement", children: "Achievement" }),
+                /* @__PURE__ */ jsx(SelectItem, { value: "course_completion", children: "Course Completion" })
               ] })
             ] })
           ] }),
           /* @__PURE__ */ jsxs(
-            Button2,
+            Button,
             {
               onClick: sendTestEmail,
               disabled: sending || !(preferences == null ? void 0 : preferences.emailEnabled),
@@ -861,78 +877,17 @@ const EmailNotifications = ({
     ] })
   ] });
 };
-const EmailNotificationsWrapper = ({ useAuth, baseUrl, clientPath }) => {
-  const { user } = useAuth();
-  React.useEffect(() => {
-    if (baseUrl) {
-      Promise.resolve().then(() => emailService$1).then(({ EmailService: EmailService2 }) => {
-        EmailService2.configure({
-          lambdaUrl: "",
-          // Will be set by consuming app's Supabase Edge Function
-          baseUrl,
-          fromEmail: void 0
-          // Will use default from EmailService
-        });
-      });
-    }
-  }, [baseUrl]);
-  const [userProfile, setUserProfile] = React.useState(null);
-  useEffect(() => {
-    const getProfile = async () => {
-      if (user == null ? void 0 : user.id) {
-        const { data: { user: authUser } } = await supabase$1.auth.getUser();
-        const { data, error } = await supabase$1.from("profiles").select("*").eq("id", user.id).single();
-        if (!error && data) {
-          setUserProfile(data);
-        }
-      }
-    };
-    getProfile();
-  }, [user]);
-  if (!user || !userProfile) {
-    return /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center p-8", children: /* @__PURE__ */ jsx("p", { className: "text-muted-foreground", children: "Please log in to access email notifications." }) });
-  }
-  return /* @__PURE__ */ jsx(
-    EmailNotifications,
-    {
-      supabase: supabase$1,
-      user: {
-        id: (userProfile == null ? void 0 : userProfile.id) || (user == null ? void 0 : user.id),
-        email: (user == null ? void 0 : user.email) || (userProfile == null ? void 0 : userProfile.email)
-      },
-      awsConfig: {
-        lambdaUrl: "",
-        fromEmail: "kahuna@raynsecure.com"
-      },
-      Button,
-      Card,
-      CardContent,
-      CardDescription,
-      CardHeader,
-      CardTitle,
-      Input,
-      Label,
-      Switch,
-      Select,
-      SelectContent,
-      SelectItem,
-      SelectTrigger,
-      SelectValue,
-      Textarea
-    }
-  );
-};
 const LessonReminderSettings = ({
   supabase: supabase2,
-  Card: Card2 = "div",
-  CardHeader: CardHeader2 = "div",
-  CardTitle: CardTitle2 = "h3",
-  CardDescription: CardDescription2 = "p",
-  CardContent: CardContent2 = "div",
-  Button: Button2 = "button",
-  Switch: Switch2 = "input",
-  Input: Input2 = "input",
-  Label: Label2 = "label",
+  Card = "div",
+  CardHeader = "div",
+  CardTitle = "h3",
+  CardDescription = "p",
+  CardContent = "div",
+  Button = "button",
+  Switch = "input",
+  Input = "input",
+  Label = "label",
   Alert = "div",
   AlertDescription = "p"
 }) => {
@@ -1032,7 +987,7 @@ const LessonReminderSettings = ({
     }
   };
   if (loading) {
-    return /* @__PURE__ */ jsx(Card2, { children: /* @__PURE__ */ jsx(CardContent2, { children: /* @__PURE__ */ jsx("p", { children: "Loading reminder settings..." }) }) });
+    return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { children: /* @__PURE__ */ jsx("p", { children: "Loading reminder settings..." }) }) });
   }
   return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsx("div", { className: "flex items-center gap-2", children: /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Lesson Reminder Settings" }) }),
@@ -1042,18 +997,18 @@ const LessonReminderSettings = ({
       /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsx(
-            Switch2,
+            Switch,
             {
               id: "enabled",
               checked: settings.enabled,
               onCheckedChange: (checked) => setSettings({ ...settings, enabled: checked })
             }
           ),
-          /* @__PURE__ */ jsx(Label2, { htmlFor: "enabled", children: "Enable Lesson Reminders" })
+          /* @__PURE__ */ jsx(Label, { htmlFor: "enabled", children: "Enable Lesson Reminders" })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
           /* @__PURE__ */ jsx(
-            Button2,
+            Button,
             {
               onClick: saveSettings,
               disabled: saving,
@@ -1063,7 +1018,7 @@ const LessonReminderSettings = ({
             }
           ),
           /* @__PURE__ */ jsx(
-            Button2,
+            Button,
             {
               variant: "outline",
               onClick: testReminders,
@@ -1076,16 +1031,16 @@ const LessonReminderSettings = ({
         ] })
       ] }),
       settings.enabled && /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-6", children: [
-        /* @__PURE__ */ jsxs(Card2, { children: [
-          /* @__PURE__ */ jsxs(CardHeader2, { children: [
-            /* @__PURE__ */ jsx(CardTitle2, { children: "Reminder Timing" }),
-            /* @__PURE__ */ jsx(CardDescription2, { children: "When to send reminders" })
+        /* @__PURE__ */ jsxs(Card, { children: [
+          /* @__PURE__ */ jsxs(CardHeader, { children: [
+            /* @__PURE__ */ jsx(CardTitle, { children: "Reminder Timing" }),
+            /* @__PURE__ */ jsx(CardDescription, { children: "When to send reminders" })
           ] }),
-          /* @__PURE__ */ jsxs(CardContent2, { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs(CardContent, { className: "space-y-4", children: [
             /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsx(Label2, { htmlFor: "reminder_time", children: "Reminder Time" }),
+              /* @__PURE__ */ jsx(Label, { htmlFor: "reminder_time", children: "Reminder Time" }),
               /* @__PURE__ */ jsx(
-                Input2,
+                Input,
                 {
                   id: "reminder_time",
                   type: "time",
@@ -1096,9 +1051,9 @@ const LessonReminderSettings = ({
               /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground", children: "What time of day should reminders be sent?" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsx(Label2, { htmlFor: "reminder_days_before", children: "Days Before" }),
+              /* @__PURE__ */ jsx(Label, { htmlFor: "reminder_days_before", children: "Days Before" }),
               /* @__PURE__ */ jsx(
-                Input2,
+                Input,
                 {
                   id: "reminder_days_before",
                   type: "number",
@@ -1115,16 +1070,16 @@ const LessonReminderSettings = ({
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs(Card2, { children: [
-          /* @__PURE__ */ jsxs(CardHeader2, { children: [
-            /* @__PURE__ */ jsx(CardTitle2, { children: "Reminder Limits" }),
-            /* @__PURE__ */ jsx(CardDescription2, { children: "Control reminder frequency and attempts" })
+        /* @__PURE__ */ jsxs(Card, { children: [
+          /* @__PURE__ */ jsxs(CardHeader, { children: [
+            /* @__PURE__ */ jsx(CardTitle, { children: "Reminder Limits" }),
+            /* @__PURE__ */ jsx(CardDescription, { children: "Control reminder frequency and attempts" })
           ] }),
-          /* @__PURE__ */ jsxs(CardContent2, { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs(CardContent, { className: "space-y-4", children: [
             /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsx(Label2, { htmlFor: "max_reminder_attempts", children: "Max Attempts" }),
+              /* @__PURE__ */ jsx(Label, { htmlFor: "max_reminder_attempts", children: "Max Attempts" }),
               /* @__PURE__ */ jsx(
-                Input2,
+                Input,
                 {
                   id: "max_reminder_attempts",
                   type: "number",
@@ -1140,9 +1095,9 @@ const LessonReminderSettings = ({
               /* @__PURE__ */ jsx("p", { className: "text-sm text-muted-foreground", children: "Maximum number of reminders per lesson" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsx(Label2, { htmlFor: "reminder_frequency_days", children: "Frequency (Days)" }),
+              /* @__PURE__ */ jsx(Label, { htmlFor: "reminder_frequency_days", children: "Frequency (Days)" }),
               /* @__PURE__ */ jsx(
-                Input2,
+                Input,
                 {
                   id: "reminder_frequency_days",
                   type: "number",
@@ -1159,27 +1114,27 @@ const LessonReminderSettings = ({
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs(Card2, { children: [
-          /* @__PURE__ */ jsxs(CardHeader2, { children: [
-            /* @__PURE__ */ jsx(CardTitle2, { children: "Upcoming Lessons" }),
-            /* @__PURE__ */ jsx(CardDescription2, { children: 'Configure "coming soon" notifications' })
+        /* @__PURE__ */ jsxs(Card, { children: [
+          /* @__PURE__ */ jsxs(CardHeader, { children: [
+            /* @__PURE__ */ jsx(CardTitle, { children: "Upcoming Lessons" }),
+            /* @__PURE__ */ jsx(CardDescription, { children: 'Configure "coming soon" notifications' })
           ] }),
-          /* @__PURE__ */ jsxs(CardContent2, { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxs(CardContent, { className: "space-y-4", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
               /* @__PURE__ */ jsx(
-                Switch2,
+                Switch,
                 {
                   id: "include_upcoming",
                   checked: settings.include_upcoming_lessons,
                   onCheckedChange: (checked) => setSettings({ ...settings, include_upcoming_lessons: checked })
                 }
               ),
-              /* @__PURE__ */ jsx(Label2, { htmlFor: "include_upcoming", children: "Include Upcoming Lessons" })
+              /* @__PURE__ */ jsx(Label, { htmlFor: "include_upcoming", children: "Include Upcoming Lessons" })
             ] }),
             settings.include_upcoming_lessons && /* @__PURE__ */ jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsx(Label2, { htmlFor: "upcoming_days_ahead", children: "Look Ahead Days" }),
+              /* @__PURE__ */ jsx(Label, { htmlFor: "upcoming_days_ahead", children: "Look Ahead Days" }),
               /* @__PURE__ */ jsx(
-                Input2,
+                Input,
                 {
                   id: "upcoming_days_ahead",
                   type: "number",
@@ -1248,15 +1203,15 @@ const LessonReminderSettingsPage = ({
 };
 const LessonReminderSettingsWrapper = ({
   supabase: supabase2,
-  Card: Card2,
-  CardHeader: CardHeader2,
-  CardTitle: CardTitle2,
-  CardDescription: CardDescription2,
-  CardContent: CardContent2,
-  Button: Button2,
-  Switch: Switch2,
-  Input: Input2,
-  Label: Label2,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Button,
+  Switch,
+  Input,
+  Label,
   Alert,
   AlertDescription,
   baseUrl,
@@ -1266,15 +1221,15 @@ const LessonReminderSettingsWrapper = ({
     LessonReminderSettings,
     {
       supabase: supabase2,
-      Card: Card2,
-      CardHeader: CardHeader2,
-      CardTitle: CardTitle2,
-      CardDescription: CardDescription2,
-      CardContent: CardContent2,
-      Button: Button2,
-      Switch: Switch2,
-      Input: Input2,
-      Label: Label2,
+      Card,
+      CardHeader,
+      CardTitle,
+      CardDescription,
+      CardContent,
+      Button,
+      Switch,
+      Input,
+      Label,
       Alert,
       AlertDescription,
       baseUrl,
@@ -3693,7 +3648,6 @@ const NotificationCenter = ({
 };
 export {
   EmailNotifications,
-  EmailNotificationsWrapper,
   EmailService,
   LessonReminderSettings,
   LessonReminderSettingsPage,
