@@ -164,9 +164,56 @@ const CircleAlert = createLucideIcon("CircleAlert", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const CircleCheckBig = createLucideIcon("CircleCheckBig", [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const CircleX = createLucideIcon("CircleX", [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const Clock = createLucideIcon("Clock", [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
   ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Copy = createLucideIcon("Copy", [
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Eye = createLucideIcon("Eye", [
+  [
+    "path",
+    {
+      d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0",
+      key: "1nclc0"
+    }
+  ],
+  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ]);
 /**
  * @license lucide-react v0.462.0 - ISC
@@ -202,6 +249,16 @@ const Play = createLucideIcon("Play", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const Plus = createLucideIcon("Plus", [
+  ["path", { d: "M5 12h14", key: "1ays0h" }],
+  ["path", { d: "M12 5v14", key: "s699le" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const Save = createLucideIcon("Save", [
   [
     "path",
@@ -212,6 +269,16 @@ const Save = createLucideIcon("Save", [
   ],
   ["path", { d: "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7", key: "1ydtos" }],
   ["path", { d: "M7 3v4a1 1 0 0 0 1 1h7", key: "t51u73" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Search = createLucideIcon("Search", [
+  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }],
+  ["path", { d: "m21 21-4.3-4.3", key: "1qie3q" }]
 ]);
 /**
  * @license lucide-react v0.462.0 - ISC
@@ -261,6 +328,22 @@ const Smartphone = createLucideIcon("Smartphone", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
+const SquarePen = createLucideIcon("SquarePen", [
+  ["path", { d: "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7", key: "1m0v6g" }],
+  [
+    "path",
+    {
+      d: "M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z",
+      key: "ohrbg2"
+    }
+  ]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
 const Target = createLucideIcon("Target", [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
   ["circle", { cx: "12", cy: "12", r: "6", key: "1vlfrh" }],
@@ -278,6 +361,16 @@ const Trash2 = createLucideIcon("Trash2", [
   ["path", { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", key: "v07s0e" }],
   ["line", { x1: "10", x2: "10", y1: "11", y2: "17", key: "1uufr5" }],
   ["line", { x1: "14", x2: "14", y1: "11", y2: "17", key: "xtxkd" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const User = createLucideIcon("User", [
+  ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
+  ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
 ]);
 /**
  * @license lucide-react v0.462.0 - ISC
@@ -1184,6 +1277,551 @@ const LessonReminderSettingsWrapper = ({
     }
   );
 };
+function EmailTemplateManager({
+  supabaseClient,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Alert,
+  AlertDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Textarea,
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+}) {
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isViewing, setIsViewing] = useState(false);
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      const { data, error: error2 } = await supabaseClient.from("email_templates").select("*").order("created_at", { ascending: false });
+      if (error2) throw error2;
+      setTemplates(data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleEdit = (template) => {
+    setSelectedTemplate(template);
+    setIsEditing(true);
+  };
+  const handleView = (template) => {
+    setSelectedTemplate(template);
+    setIsViewing(true);
+  };
+  const handleDelete = async (template) => {
+    if (template.is_system) {
+      alert("System templates cannot be deleted");
+      return;
+    }
+    if (confirm(`Are you sure you want to delete "${template.name}"?`)) {
+      try {
+        const { error: error2 } = await supabaseClient.from("email_templates").delete().eq("id", template.id);
+        if (error2) throw error2;
+        loadTemplates();
+      } catch (err) {
+        alert(`Error deleting template: ${err.message}`);
+      }
+    }
+  };
+  const handleDuplicate = async (template) => {
+    try {
+      const { error: error2 } = await supabaseClient.from("email_templates").insert({
+        name: `${template.name} (Copy)`,
+        type: template.type,
+        subject: template.subject,
+        content: template.content,
+        is_system: false
+      });
+      if (error2) throw error2;
+      loadTemplates();
+    } catch (err) {
+      alert(`Error duplicating template: ${err.message}`);
+    }
+  };
+  const filteredTemplates = templates.filter((template) => {
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) || template.type.toLowerCase().includes(searchTerm.toLowerCase()) || template.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || statusFilter === "system" && template.is_system || statusFilter === "custom" && !template.is_system;
+    const matchesType = typeFilter === "all" || template.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
+  const getTypeColor = (type) => {
+    switch (type) {
+      case "lesson_completed":
+        return "bg-green-100 text-green-800";
+      case "track_milestone":
+        return "bg-blue-100 text-blue-800";
+      case "quiz_high_score":
+        return "bg-purple-100 text-purple-800";
+      case "lesson_reminder":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  };
+  if (loading) {
+    return /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center py-8", children: /* @__PURE__ */ jsx("div", { className: "text-muted-foreground", children: "Loading templates..." }) });
+  }
+  if (error) {
+    return /* @__PURE__ */ jsx(Alert, { className: "mb-4", children: /* @__PURE__ */ jsxs(AlertDescription, { children: [
+      "Error loading templates: ",
+      error
+    ] }) });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
+        /* @__PURE__ */ jsx("p", { className: "text-muted-foreground", children: "Create and manage email templates" })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxs(Button, { className: "bg-learning-primary hover:bg-learning-primary/90", children: [
+        /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-2" }),
+        "Create Template"
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row gap-4", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsx(Search, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
+        /* @__PURE__ */ jsx(
+          Input,
+          {
+            placeholder: "Search templates...",
+            value: searchTerm,
+            onChange: (e) => setSearchTerm(e.target.value),
+            className: "pl-10"
+          }
+        )
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+        /* @__PURE__ */ jsxs(Select, { value: statusFilter, onValueChange: setStatusFilter, children: [
+          /* @__PURE__ */ jsx(SelectTrigger, { className: "w-32", children: /* @__PURE__ */ jsx(SelectValue, { placeholder: "Status" }) }),
+          /* @__PURE__ */ jsxs(SelectContent, { children: [
+            /* @__PURE__ */ jsx(SelectItem, { value: "all", children: "All Status" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "system", children: "System" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "custom", children: "Custom" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs(Select, { value: typeFilter, onValueChange: setTypeFilter, children: [
+          /* @__PURE__ */ jsx(SelectTrigger, { className: "w-40", children: /* @__PURE__ */ jsx(SelectValue, { placeholder: "Type" }) }),
+          /* @__PURE__ */ jsxs(SelectContent, { children: [
+            /* @__PURE__ */ jsx(SelectItem, { value: "all", children: "All Types" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "lesson_completed", children: "Lesson Completed" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "lesson_reminder", children: "Lesson Reminder" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "quiz_high_score", children: "Quiz High Score" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "track_milestone", children: "Track Milestone" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "system_alert", children: "System Alert" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "task_due", children: "Task Due" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "achievement", children: "Achievement" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "course_completion", children: "Course Completion" })
+          ] })
+        ] })
+      ] })
+    ] }),
+    filteredTemplates.length === 0 ? /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(CardContent, { className: "flex flex-col items-center justify-center py-12", children: [
+      /* @__PURE__ */ jsx(Mail, { className: "h-12 w-12 text-muted-foreground mb-4" }),
+      /* @__PURE__ */ jsx("h3", { className: "text-lg font-semibold mb-2", children: "No templates found" }),
+      /* @__PURE__ */ jsx("p", { className: "text-muted-foreground text-center", children: searchTerm ? "No templates match your search." : "Create your first email template to get started." })
+    ] }) }) : /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-0", children: /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full", children: [
+      /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { className: "border-b", children: [
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Template" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Type" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Status" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Created" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Actions" })
+      ] }) }),
+      /* @__PURE__ */ jsx("tbody", { children: filteredTemplates.map((template) => /* @__PURE__ */ jsxs("tr", { className: "border-b hover:bg-gray-50", children: [
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "text-left", children: [
+          /* @__PURE__ */ jsx("div", { className: "font-medium", children: template.name }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: template.subject })
+        ] }) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsx(Badge, { className: getTypeColor(template.type), children: template.type.replace("_", " ") }) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsx(Badge, { variant: "secondary", children: "Published" }),
+          template.is_system && /* @__PURE__ */ jsx(Badge, { variant: "outline", children: "System" })
+        ] }) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4 text-sm text-muted-foreground", children: formatDate(template.created_at) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsx(
+            Button,
+            {
+              variant: "outline",
+              size: "sm",
+              onClick: () => handleView(template),
+              children: /* @__PURE__ */ jsx(Eye, { className: "h-4 w-4" })
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            Button,
+            {
+              variant: "outline",
+              size: "sm",
+              onClick: () => handleEdit(template),
+              children: /* @__PURE__ */ jsx(SquarePen, { className: "h-4 w-4" })
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            Button,
+            {
+              variant: "outline",
+              size: "sm",
+              onClick: () => handleDuplicate(template),
+              children: /* @__PURE__ */ jsx(Copy, { className: "h-4 w-4" })
+            }
+          ),
+          !template.is_system && /* @__PURE__ */ jsx(
+            Button,
+            {
+              variant: "outline",
+              size: "sm",
+              onClick: () => handleDelete(template),
+              className: "text-red-600 hover:text-red-700",
+              children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" })
+            }
+          )
+        ] }) })
+      ] }, template.id)) })
+    ] }) }) }) }),
+    (isEditing || isViewing) && selectedTemplate && /* @__PURE__ */ jsx(Dialog, { open: isEditing || isViewing, onOpenChange: () => {
+      setIsEditing(false);
+      setIsViewing(false);
+      setSelectedTemplate(null);
+    }, children: /* @__PURE__ */ jsxs(DialogContent, { className: "max-w-4xl max-h-[80vh] overflow-y-auto", children: [
+      /* @__PURE__ */ jsx(DialogHeader, { children: /* @__PURE__ */ jsxs(DialogTitle, { children: [
+        isEditing ? "Edit Template" : "View Template",
+        ": ",
+        selectedTemplate.name
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx(Label, { htmlFor: "name", children: "Template Name" }),
+            /* @__PURE__ */ jsx(
+              Input,
+              {
+                id: "name",
+                value: selectedTemplate.name,
+                disabled: !isEditing || selectedTemplate.is_system
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx(Label, { htmlFor: "type", children: "Template Type" }),
+            /* @__PURE__ */ jsx(
+              Input,
+              {
+                id: "type",
+                value: selectedTemplate.type,
+                disabled: !isEditing || selectedTemplate.is_system
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx(Label, { htmlFor: "subject", children: "Subject" }),
+          /* @__PURE__ */ jsx(
+            Input,
+            {
+              id: "subject",
+              value: selectedTemplate.subject,
+              disabled: !isEditing
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx(Label, { htmlFor: "content", children: "Content" }),
+          /* @__PURE__ */ jsx(
+            Textarea,
+            {
+              id: "content",
+              value: selectedTemplate.content,
+              disabled: !isEditing,
+              rows: 10,
+              className: "font-mono text-sm"
+            }
+          )
+        ] }),
+        isEditing && /* @__PURE__ */ jsxs("div", { className: "flex justify-end space-x-2", children: [
+          /* @__PURE__ */ jsx(Button, { variant: "outline", onClick: () => {
+            setIsEditing(false);
+            setSelectedTemplate(null);
+          }, children: "Cancel" }),
+          /* @__PURE__ */ jsx(Button, { onClick: () => {
+            setIsEditing(false);
+            setSelectedTemplate(null);
+          }, children: "Save Changes" })
+        ] })
+      ] })
+    ] }) })
+  ] });
+}
+function RecentEmailNotifications({
+  supabaseClient,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Alert,
+  AlertDescription
+}) {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const { data, error: error2 } = await supabaseClient.from("email_notifications").select("*").order("created_at", { ascending: false }).limit(100);
+      if (error2) throw error2;
+      setNotifications(data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "sent":
+        return "bg-green-100 text-green-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "sent":
+        return /* @__PURE__ */ jsx(CircleCheckBig, { className: "h-4 w-4" });
+      case "failed":
+        return /* @__PURE__ */ jsx(CircleX, { className: "h-4 w-4" });
+      case "pending":
+        return /* @__PURE__ */ jsx(Clock, { className: "h-4 w-4" });
+      default:
+        return /* @__PURE__ */ jsx(CircleAlert, { className: "h-4 w-4" });
+    }
+  };
+  const getTypeColor = (type) => {
+    switch (type) {
+      case "lesson_completed":
+        return "bg-green-100 text-green-800";
+      case "lesson_reminder":
+        return "bg-orange-100 text-orange-800";
+      case "quiz_high_score":
+        return "bg-purple-100 text-purple-800";
+      case "track_milestone":
+        return "bg-blue-100 text-blue-800";
+      case "system_alert":
+        return "bg-red-100 text-red-800";
+      case "task_due":
+        return "bg-yellow-100 text-yellow-800";
+      case "achievement":
+        return "bg-pink-100 text-pink-800";
+      case "course_completion":
+        return "bg-indigo-100 text-indigo-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+  const filteredNotifications = notifications.filter((notification) => {
+    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) || notification.email.toLowerCase().includes(searchTerm.toLowerCase()) || notification.type.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || notification.status === statusFilter;
+    const matchesType = typeFilter === "all" || notification.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
+  if (loading) {
+    return /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center py-8", children: /* @__PURE__ */ jsx("div", { className: "text-muted-foreground", children: "Loading recent notifications..." }) });
+  }
+  if (error) {
+    return /* @__PURE__ */ jsx(Alert, { className: "mb-4", children: /* @__PURE__ */ jsxs(AlertDescription, { children: [
+      "Error loading notifications: ",
+      error
+    ] }) });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxs("div", { children: [
+        /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Recent Email Notifications" }),
+        /* @__PURE__ */ jsx("p", { className: "text-muted-foreground", children: "View sent email notifications and their status" })
+      ] }),
+      /* @__PURE__ */ jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxs(Button, { variant: "outline", size: "sm", onClick: loadNotifications, children: [
+        /* @__PURE__ */ jsx(Mail, { className: "h-4 w-4 mr-2" }),
+        "Refresh"
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row gap-4", children: [
+      /* @__PURE__ */ jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsx(Search, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
+        /* @__PURE__ */ jsx(
+          Input,
+          {
+            placeholder: "Search notifications...",
+            value: searchTerm,
+            onChange: (e) => setSearchTerm(e.target.value),
+            className: "pl-10"
+          }
+        )
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "flex gap-2", children: [
+        /* @__PURE__ */ jsxs(Select, { value: statusFilter, onValueChange: setStatusFilter, children: [
+          /* @__PURE__ */ jsx(SelectTrigger, { className: "w-32", children: /* @__PURE__ */ jsx(SelectValue, { placeholder: "Status" }) }),
+          /* @__PURE__ */ jsxs(SelectContent, { children: [
+            /* @__PURE__ */ jsx(SelectItem, { value: "all", children: "All Status" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "sent", children: "Sent" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "failed", children: "Failed" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "pending", children: "Pending" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs(Select, { value: typeFilter, onValueChange: setTypeFilter, children: [
+          /* @__PURE__ */ jsx(SelectTrigger, { className: "w-40", children: /* @__PURE__ */ jsx(SelectValue, { placeholder: "Type" }) }),
+          /* @__PURE__ */ jsxs(SelectContent, { children: [
+            /* @__PURE__ */ jsx(SelectItem, { value: "all", children: "All Types" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "lesson_completed", children: "Lesson Completed" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "lesson_reminder", children: "Lesson Reminder" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "quiz_high_score", children: "Quiz High Score" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "track_milestone", children: "Track Milestone" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "system_alert", children: "System Alert" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "task_due", children: "Task Due" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "achievement", children: "Achievement" }),
+            /* @__PURE__ */ jsx(SelectItem, { value: "course_completion", children: "Course Completion" })
+          ] })
+        ] })
+      ] })
+    ] }),
+    filteredNotifications.length === 0 ? /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(CardContent, { className: "flex flex-col items-center justify-center py-12", children: [
+      /* @__PURE__ */ jsx(Mail, { className: "h-12 w-12 text-muted-foreground mb-4" }),
+      /* @__PURE__ */ jsx("h3", { className: "text-lg font-semibold mb-2", children: "No notifications found" }),
+      /* @__PURE__ */ jsx("p", { className: "text-muted-foreground text-center", children: searchTerm || statusFilter !== "all" || typeFilter !== "all" ? "No notifications match your filters." : "No email notifications have been sent yet." })
+    ] }) }) : /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-0", children: /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full", children: [
+      /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { className: "border-b bg-gray-50", children: [
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Notification" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Type" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Status" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Recipient" }),
+        /* @__PURE__ */ jsx("th", { className: "text-left p-4 font-medium", children: "Sent" })
+      ] }) }),
+      /* @__PURE__ */ jsx("tbody", { children: filteredNotifications.map((notification) => /* @__PURE__ */ jsxs("tr", { className: "border-b hover:bg-gray-50", children: [
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "text-left", children: [
+          /* @__PURE__ */ jsx("div", { className: "font-medium", children: notification.title }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground line-clamp-2", children: notification.message })
+        ] }) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsx(Badge, { className: getTypeColor(notification.type), children: notification.type.replace("_", " ") }) }),
+        /* @__PURE__ */ jsxs("td", { className: "p-4", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+            getStatusIcon(notification.status),
+            /* @__PURE__ */ jsx(Badge, { className: getStatusColor(notification.status), children: notification.status })
+          ] }),
+          notification.status === "failed" && notification.error_message && /* @__PURE__ */ jsx("div", { className: "text-xs text-red-600 mt-1", children: notification.error_message })
+        ] }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsx(User, { className: "h-4 w-4 text-muted-foreground" }),
+          /* @__PURE__ */ jsx("span", { className: "text-sm", children: notification.email })
+        ] }) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsx(Calendar, { className: "h-4 w-4 text-muted-foreground" }),
+          /* @__PURE__ */ jsxs("div", { className: "text-sm", children: [
+            /* @__PURE__ */ jsx("div", { children: formatDate(notification.created_at) }),
+            notification.sent_at && notification.sent_at !== notification.created_at && /* @__PURE__ */ jsxs("div", { className: "text-xs text-muted-foreground", children: [
+              "Sent: ",
+              formatDate(notification.sent_at)
+            ] })
+          ] })
+        ] }) })
+      ] }, notification.id)) })
+    ] }) }) }) }),
+    notifications.length > 0 && /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
+      /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(CircleCheckBig, { className: "h-5 w-5 text-green-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-green-600", children: notifications.filter((n) => n.status === "sent").length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Sent" })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(CircleX, { className: "h-5 w-5 text-red-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-red-600", children: notifications.filter((n) => n.status === "failed").length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Failed" })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(Clock, { className: "h-5 w-5 text-yellow-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-yellow-600", children: notifications.filter((n) => n.status === "pending").length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Pending" })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(Mail, { className: "h-5 w-5 text-blue-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-blue-600", children: notifications.length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Total" })
+        ] })
+      ] }) }) })
+    ] })
+  ] });
+}
 const supabase = null;
 const useNotifications = (filters = {}) => {
   const queryClient = useQueryClient();
@@ -3596,12 +4234,14 @@ const NotificationCenter = ({
 export {
   EmailNotifications,
   EmailService,
+  EmailTemplateManager,
   LessonReminderSettings,
   LessonReminderSettingsPage,
   LessonReminderSettingsWrapper,
   NotificationCenter,
   NotificationItem,
   NotificationSettings,
+  RecentEmailNotifications,
   emailService,
   useNotificationSettings,
   useNotifications
