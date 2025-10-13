@@ -44,6 +44,17 @@ interface EmailPreferences {
   quietHoursEnd: string;
 }
 
+interface ReminderSettings {
+  id?: string;
+  enabled: boolean;
+  reminder_days_before: number;
+  reminder_time: string;
+  include_upcoming_lessons: boolean;
+  upcoming_days_ahead: number;
+  max_reminder_attempts: number;
+  reminder_frequency_days: number;
+}
+
 export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   supabase,
   user,
@@ -65,8 +76,19 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   Textarea,
 }) => {
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
+  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
+    enabled: true,
+    reminder_days_before: 1,
+    reminder_time: '09:00:00',
+    include_upcoming_lessons: true,
+    upcoming_days_ahead: 3,
+    max_reminder_attempts: 3,
+    reminder_frequency_days: 7,
+  });
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [savingReminders, setSavingReminders] = useState(false);
+  const [testingReminders, setTestingReminders] = useState(false);
   const [testEmailType, setTestEmailType] = useState<string>('system_alert');
 
   // Configure email service with AWS config
@@ -76,10 +98,11 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
     }
   }, [awsConfig]);
 
-  // Load user preferences
+  // Load user preferences and reminder settings
   useEffect(() => {
     if (user) {
       loadPreferences();
+      loadReminderSettings();
     }
   }, [user]);
 
@@ -180,6 +203,94 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
     if (error) {
       console.error('Error updating preferences:', error);
+    }
+  };
+
+  const loadReminderSettings = async () => {
+    try {
+      // Fetch the single global configuration row
+      const { data, error: fetchError } = await supabase
+        .from('lesson_reminder_config')
+        .select('*')
+        .eq('id', '00000000-0000-0000-0000-000000000001')
+        .single();
+
+      if (fetchError) {
+        console.error('Error loading reminder settings:', fetchError);
+        return;
+      }
+
+      if (data) {
+        setReminderSettings({
+          id: data.id,
+          enabled: data.enabled,
+          reminder_days_before: data.reminder_days_before,
+          reminder_time: data.reminder_time,
+          include_upcoming_lessons: data.include_upcoming_lessons,
+          upcoming_days_ahead: data.upcoming_days_ahead,
+          max_reminder_attempts: data.max_reminder_attempts || 3,
+          reminder_frequency_days: data.reminder_frequency_days || 7,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error loading reminder settings:', err);
+    }
+  };
+
+  const saveReminderSettings = async () => {
+    try {
+      setSavingReminders(true);
+
+      // Always update the single global configuration row
+      const { error: updateError } = await supabase
+        .from('lesson_reminder_config')
+        .update({
+          enabled: reminderSettings.enabled,
+          reminder_days_before: reminderSettings.reminder_days_before,
+          reminder_time: reminderSettings.reminder_time,
+          include_upcoming_lessons: reminderSettings.include_upcoming_lessons,
+          upcoming_days_ahead: reminderSettings.upcoming_days_ahead,
+          max_reminder_attempts: reminderSettings.max_reminder_attempts,
+          reminder_frequency_days: reminderSettings.reminder_frequency_days,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', '00000000-0000-0000-0000-000000000001');
+
+      if (updateError) throw updateError;
+
+      alert('Reminder settings saved successfully!');
+    } catch (err: any) {
+      console.error('Error saving reminder settings:', err);
+      alert(`Failed to save reminder settings: ${err.message}`);
+    } finally {
+      setSavingReminders(false);
+    }
+  };
+
+  const testReminders = async () => {
+    try {
+      setTestingReminders(true);
+
+      // Call the Edge Function to send test reminders
+      const { data, error } = await supabase.functions.invoke('send-lesson-reminders', {
+        body: {
+          test: true,
+          email: user?.email,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data && data.success) {
+        alert(`Test reminders sent successfully! Check your email at ${user?.email}`);
+      } else {
+        alert(`Test failed: ${data?.message || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      console.error('Error testing reminders:', err);
+      alert(`Failed to send test reminders: ${err.message}`);
+    } finally {
+      setTestingReminders(false);
     }
   };
 
@@ -334,6 +445,97 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                     checked={preferences?.courseCompletions || false}
                     onCheckedChange={(checked) => updatePreferences({ courseCompletions: checked })}
                   />
+                </div>
+
+                {/* Lesson Reminders - Expandable Section */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-left font-medium">Lesson Reminders</Label>
+                    <Switch
+                      checked={reminderSettings.enabled}
+                      onCheckedChange={(checked) => setReminderSettings(prev => ({ ...prev, enabled: checked }))}
+                    />
+                  </div>
+                  
+                  {reminderSettings.enabled && (
+                    <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="reminder-days" className="text-sm">Days before lesson</Label>
+                          <Input
+                            id="reminder-days"
+                            type="number"
+                            min="0"
+                            max="7"
+                            value={reminderSettings.reminder_days_before}
+                            onChange={(e) => setReminderSettings(prev => ({ 
+                              ...prev, 
+                              reminder_days_before: parseInt(e.target.value) || 0 
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="reminder-time" className="text-sm">Send at time</Label>
+                          <Input
+                            id="reminder-time"
+                            type="time"
+                            value={reminderSettings.reminder_time}
+                            onChange={(e) => setReminderSettings(prev => ({ 
+                              ...prev, 
+                              reminder_time: e.target.value 
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm">Include upcoming lessons</Label>
+                        <Switch
+                          checked={reminderSettings.include_upcoming_lessons}
+                          onCheckedChange={(checked) => setReminderSettings(prev => ({ 
+                            ...prev, 
+                            include_upcoming_lessons: checked 
+                          }))}
+                        />
+                      </div>
+                      {reminderSettings.include_upcoming_lessons && (
+                        <div>
+                          <Label htmlFor="upcoming-days" className="text-sm">Look ahead days</Label>
+                          <Input
+                            id="upcoming-days"
+                            type="number"
+                            min="1"
+                            max="14"
+                            value={reminderSettings.upcoming_days_ahead}
+                            onChange={(e) => setReminderSettings(prev => ({ 
+                              ...prev, 
+                              upcoming_days_ahead: parseInt(e.target.value) || 3 
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={saveReminderSettings}
+                          disabled={savingReminders}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {savingReminders ? 'Saving...' : 'Save Settings'}
+                        </Button>
+                        <Button
+                          onClick={testReminders}
+                          disabled={testingReminders}
+                          variant="outline"
+                          size="sm"
+                        >
+                          {testingReminders ? 'Testing...' : 'Send Test'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
