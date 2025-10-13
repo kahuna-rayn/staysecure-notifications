@@ -1255,17 +1255,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           /* @__PURE__ */ jsxRuntime.jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
           /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-muted-foreground", children: "Create and manage email templates" })
         ] }),
-        /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntime.jsxs(
-          Button,
-          {
-            className: "bg-learning-primary hover:bg-learning-primary/90",
-            onClick: handleCreate,
-            children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Plus, { className: "h-4 w-4 mr-2" }),
-              "Create Template"
-            ]
-          }
-        ) })
+        /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsxRuntime.jsx("div", { style: { backgroundColor: "red", color: "white", padding: "4px", fontSize: "12px" }, children: "DEBUG: Button should be here" }),
+          /* @__PURE__ */ jsxRuntime.jsxs(
+            Button,
+            {
+              className: "bg-learning-primary hover:bg-learning-primary/90",
+              onClick: handleCreate,
+              children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Plus, { className: "h-4 w-4 mr-2" }),
+                "Create Template"
+              ]
+            }
+          )
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex flex-col sm:flex-row gap-4", children: [
         /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "relative", children: [

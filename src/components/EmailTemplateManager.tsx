@@ -378,6 +378,9 @@ export default function EmailTemplateManager({
           <p className="text-muted-foreground">Create and manage email templates</p>
         </div>
         <div className="flex items-center space-x-2">
+          <div style={{backgroundColor: 'red', color: 'white', padding: '4px', fontSize: '12px'}}>
+            DEBUG: Button should be here
+          </div>
           <Button 
             className="bg-learning-primary hover:bg-learning-primary/90"
             onClick={handleCreate}
