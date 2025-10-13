@@ -17,7 +17,7 @@ interface EmailTemplate {
   html_body_template: string;
   text_body_template?: string | null;
   variables?: any;
-  system: boolean;
+  is_system: boolean;
   is_active?: boolean | null;
   created_at: string;
   updated_at?: string | null;
@@ -150,8 +150,9 @@ export default function EmailTemplateManager({
         .insert({
           name: `${template.name} (Copy)`,
           type: template.type,
-          subject: template.subject,
-          content: template.content,
+          subject_template: template.subject_template,
+          html_body_template: template.html_body_template,
+          text_body_template: template.text_body_template,
           is_system: false
         });
 
@@ -258,7 +259,7 @@ export default function EmailTemplateManager({
     const matchesSearch = 
       template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.subject.toLowerCase().includes(searchTerm.toLowerCase());
+      template.subject_template.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'system' && template.is_system) ||
@@ -394,7 +395,7 @@ export default function EmailTemplateManager({
                         <div className="text-left">
                           <div className="font-medium">{template.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {template.subject}
+                            {template.subject_template}
                           </div>
                         </div>
                       </td>

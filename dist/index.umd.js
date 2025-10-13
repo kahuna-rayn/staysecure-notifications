@@ -1035,8 +1035,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const { error: error2 } = await supabaseClient.from("email_templates").insert({
           name: `${template.name} (Copy)`,
           type: template.type,
-          subject: template.subject,
-          content: template.content,
+          subject_template: template.subject_template,
+          html_body_template: template.html_body_template,
+          text_body_template: template.text_body_template,
           is_system: false
         });
         if (error2) throw error2;
@@ -1128,7 +1129,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     };
     const filteredTemplates = templates.filter((template) => {
-      const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) || template.type.toLowerCase().includes(searchTerm.toLowerCase()) || template.subject.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) || template.type.toLowerCase().includes(searchTerm.toLowerCase()) || template.subject_template.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || statusFilter === "system" && template.is_system || statusFilter === "custom" && !template.is_system;
       const matchesType = typeFilter === "all" || template.type === typeFilter;
       return matchesSearch && matchesStatus && matchesType;
@@ -1227,7 +1228,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         /* @__PURE__ */ jsxRuntime.jsx("tbody", { children: filteredTemplates.map((template) => /* @__PURE__ */ jsxRuntime.jsxs("tr", { className: "border-b hover:bg-gray-50", children: [
           /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-left", children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "font-medium", children: template.name }),
-            /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground", children: template.subject })
+            /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground", children: template.subject_template })
           ] }) }),
           /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx(Badge, { className: getTypeColor(template.type), children: template.type.replace("_", " ") }) }),
           /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
