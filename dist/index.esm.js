@@ -1333,7 +1333,7 @@ function EmailTemplateManager({
             Input,
             {
               id: "subject",
-              value: selectedTemplate.subject,
+              value: selectedTemplate.subject_template,
               disabled: !isEditing
             }
           )
@@ -1344,7 +1344,7 @@ function EmailTemplateManager({
             Textarea,
             {
               id: "content",
-              value: selectedTemplate.content,
+              value: selectedTemplate.html_body_template,
               disabled: !isEditing,
               rows: 10,
               className: "font-mono text-sm"

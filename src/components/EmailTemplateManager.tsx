@@ -508,7 +508,7 @@ export default function EmailTemplateManager({
                 <Label htmlFor="subject">Subject</Label>
                 <Input
                   id="subject"
-                  value={selectedTemplate.subject}
+                  value={selectedTemplate.subject_template}
                   disabled={!isEditing}
                 />
               </div>
@@ -516,7 +516,7 @@ export default function EmailTemplateManager({
                 <Label htmlFor="content">Content</Label>
                 <Textarea
                   id="content"
-                  value={selectedTemplate.content}
+                  value={selectedTemplate.html_body_template}
                   disabled={!isEditing}
                   rows={10}
                   className="font-mono text-sm"

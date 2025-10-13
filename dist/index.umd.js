@@ -1333,7 +1333,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               Input,
               {
                 id: "subject",
-                value: selectedTemplate.subject,
+                value: selectedTemplate.subject_template,
                 disabled: !isEditing
               }
             )
@@ -1344,7 +1344,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               Textarea,
               {
                 id: "content",
-                value: selectedTemplate.content,
+                value: selectedTemplate.html_body_template,
                 disabled: !isEditing,
                 rows: 10,
                 className: "font-mono text-sm"
