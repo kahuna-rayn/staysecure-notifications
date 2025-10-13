@@ -261,6 +261,9 @@ export default function EmailTemplateManager({
   };
 
   const generateSampleVariables = (templateType: string) => {
+    // Use dynamic origin for lesson URLs to work across all client instances
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+    
     const baseVariables = {
       user_name: 'John Doe',
       lesson_title: 'Introduction to Cybersecurity',
@@ -275,7 +278,7 @@ export default function EmailTemplateManager({
         day: 'numeric' 
       }),
       reminder_type: 'Available Now',
-      lesson_url: 'http://localhost:8080/#/lesson/sample-lesson-id'
+      lesson_url: `${origin}/#/lesson/sample-lesson-id`
     };
 
     switch (templateType) {

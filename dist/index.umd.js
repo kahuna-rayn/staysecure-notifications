@@ -1156,6 +1156,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     };
     const generateSampleVariables = (templateType) => {
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
       const baseVariables = {
         user_name: "John Doe",
         lesson_title: "Introduction to Cybersecurity",
@@ -1170,7 +1171,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           day: "numeric"
         }),
         reminder_type: "Available Now",
-        lesson_url: "http://localhost:8080/#/lesson/sample-lesson-id"
+        lesson_url: `${origin}/#/lesson/sample-lesson-id`
       };
       switch (templateType) {
         case "lesson_completed":
