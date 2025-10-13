@@ -417,6 +417,59 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const path = clientPath ? `/${clientPath}` : "";
       return `${base}${path}/#/lesson/${lessonId}`;
     }
+    // Template variable substitution
+    substituteVariables(template, variables) {
+      let result = template;
+      for (const [key, value] of Object.entries(variables)) {
+        const regex = new RegExp(`{{${key}}}`, "g");
+        result = result.replace(regex, String(value || ""));
+      }
+      return result;
+    }
+    // Fetch template from database
+    async fetchTemplate(type, supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient.from("email_templates").select("*").eq("type", type).eq("is_active", true).order("system", { ascending: false }).limit(1).single();
+        if (error) {
+          console.error(`Error fetching template for type ${type}:`, error);
+          return null;
+        }
+        return data;
+      } catch (error) {
+        console.error(`Error fetching template for type ${type}:`, error);
+        return null;
+      }
+    }
+    // Send email using template from database
+    async sendEmailFromTemplate(type, to, variables, supabaseClient) {
+      try {
+        const template = await this.fetchTemplate(type, supabaseClient);
+        if (!template) {
+          return {
+            success: false,
+            error: `No active template found for type: ${type}`
+          };
+        }
+        const subject = this.substituteVariables(template.subject_template, variables);
+        const htmlBody = this.substituteVariables(template.html_body_template, variables);
+        const textBody = template.text_body_template ? this.substituteVariables(template.text_body_template, variables) : void 0;
+        return await this.sendEmail(
+          {
+            to,
+            subject,
+            htmlBody,
+            textBody
+          },
+          supabaseClient
+        );
+      } catch (error) {
+        console.error("Error sending email from template:", error);
+        return {
+          success: false,
+          error: error.message || "Failed to send email from template"
+        };
+      }
+    }
     async sendEmail(emailData, supabaseClient) {
       try {
         if (supabaseClient) {
@@ -488,7 +541,23 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     // Template for lesson reminder emails
-    async sendLessonReminder(to, lessonTitle, scheduledTime, supabaseClient) {
+    async sendLessonReminder(to, lessonTitle, scheduledTime, supabaseClient, additionalVariables) {
+      if (supabaseClient) {
+        const variables = {
+          lesson_title: lessonTitle,
+          scheduled_time: scheduledTime,
+          ...additionalVariables
+        };
+        const result = await this.sendEmailFromTemplate(
+          "lesson_reminder",
+          to,
+          variables,
+          supabaseClient
+        );
+        if (result.success || result.error !== `No active template found for type: lesson_reminder`) {
+          return result;
+        }
+      }
       const subject = `Reminder: ${lessonTitle} starts soon`;
       const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

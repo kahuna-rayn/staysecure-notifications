@@ -13,12 +13,14 @@ interface EmailTemplate {
   id: string;
   name: string;
   type: string;
-  subject: string;
-  content: string;
-  is_system: boolean;
+  subject_template: string;
+  html_body_template: string;
+  text_body_template?: string | null;
+  variables?: any;
+  system: boolean;
+  is_active?: boolean | null;
   created_at: string;
-  updated_at: string;
-  created_by: string;
+  updated_at?: string | null;
 }
 
 interface EmailTemplateManagerProps {

@@ -7,6 +7,18 @@ export interface EmailData {
   from?: string;
 }
 
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  type: string;
+  subject_template: string;
+  html_body_template: string;
+  text_body_template?: string | null;
+  variables?: string[] | null;
+  is_active?: boolean | null;
+  system: boolean;
+}
+
 export class EmailService {
   private static instance: EmailService;
   private lambdaUrl: string;
@@ -52,6 +64,87 @@ export class EmailService {
     const base = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
     const path = clientPath ? `/${clientPath}` : '';
     return `${base}${path}/#/lesson/${lessonId}`;
+  }
+
+  // Template variable substitution
+  private substituteVariables(template: string, variables: Record<string, any>): string {
+    let result = template;
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      result = result.replace(regex, String(value || ''));
+    }
+    return result;
+  }
+
+  // Fetch template from database
+  private async fetchTemplate(
+    type: string,
+    supabaseClient: any
+  ): Promise<EmailTemplate | null> {
+    try {
+      const { data, error } = await supabaseClient
+        .from('email_templates')
+        .select('*')
+        .eq('type', type)
+        .eq('is_active', true)
+        .order('system', { ascending: false }) // Prefer system templates
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error(`Error fetching template for type ${type}:`, error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`Error fetching template for type ${type}:`, error);
+      return null;
+    }
+  }
+
+  // Send email using template from database
+  async sendEmailFromTemplate(
+    type: string,
+    to: string,
+    variables: Record<string, any>,
+    supabaseClient: any
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      // Fetch template from database
+      const template = await this.fetchTemplate(type, supabaseClient);
+
+      if (!template) {
+        return {
+          success: false,
+          error: `No active template found for type: ${type}`,
+        };
+      }
+
+      // Substitute variables in subject and body
+      const subject = this.substituteVariables(template.subject_template, variables);
+      const htmlBody = this.substituteVariables(template.html_body_template, variables);
+      const textBody = template.text_body_template
+        ? this.substituteVariables(template.text_body_template, variables)
+        : undefined;
+
+      // Send the email
+      return await this.sendEmail(
+        {
+          to,
+          subject,
+          htmlBody,
+          textBody,
+        },
+        supabaseClient
+      );
+    } catch (error: any) {
+      console.error('Error sending email from template:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to send email from template',
+      };
+    }
   }
 
   async sendEmail(emailData: EmailData, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -134,7 +227,35 @@ export class EmailService {
   }
 
   // Template for lesson reminder emails
-  async sendLessonReminder(to: string, lessonTitle: string, scheduledTime: string, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendLessonReminder(
+    to: string,
+    lessonTitle: string,
+    scheduledTime: string,
+    supabaseClient?: any,
+    additionalVariables?: Record<string, any>
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    // Try to use database template first
+    if (supabaseClient) {
+      const variables = {
+        lesson_title: lessonTitle,
+        scheduled_time: scheduledTime,
+        ...additionalVariables,
+      };
+
+      const result = await this.sendEmailFromTemplate(
+        'lesson_reminder',
+        to,
+        variables,
+        supabaseClient
+      );
+
+      // If template found and sent successfully, return
+      if (result.success || result.error !== `No active template found for type: lesson_reminder`) {
+        return result;
+      }
+    }
+
+    // Fallback to hardcoded template if no database template exists
     const subject = `Reminder: ${lessonTitle} starts soon`;
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
