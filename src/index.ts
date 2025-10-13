@@ -1,8 +1,6 @@
 // Main exports for the notifications module
 export { EmailNotifications } from './components/EmailNotifications';
-export { default as LessonReminderSettings } from './components/LessonReminderSettings';
-export { default as LessonReminderSettingsPage } from './components/LessonReminderSettingsPage';
-export { default as LessonReminderSettingsWrapper } from './components/LessonReminderSettingsWrapper';
+// Old lesson reminder components removed - functionality consolidated into EmailNotifications
 export { default as EmailTemplateManager } from './components/EmailTemplateManager';
 export { default as RecentEmailNotifications } from './components/RecentEmailNotifications';
 export { NotificationCenter } from './components/NotificationCenter';
