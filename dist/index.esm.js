@@ -230,7 +230,7 @@ const Filter = createLucideIcon("Filter", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const Mail = createLucideIcon("Mail", [
+const Mail$1 = createLucideIcon("Mail", [
   ["rect", { width: "20", height: "16", x: "2", y: "4", rx: "2", key: "18n3k1" }],
   ["path", { d: "m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7", key: "1ocrg3" }]
 ]);
@@ -253,6 +253,22 @@ const Plus = createLucideIcon("Plus", [
 const Search = createLucideIcon("Search", [
   ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }],
   ["path", { d: "m21 21-4.3-4.3", key: "1qie3q" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const Send = createLucideIcon("Send", [
+  [
+    "path",
+    {
+      d: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z",
+      key: "1ffxy3"
+    }
+  ],
+  ["path", { d: "m21.854 2.147-10.94 10.939", key: "12cjpa" }]
 ]);
 /**
  * @license lucide-react v0.462.0 - ISC
@@ -629,6 +645,26 @@ const _EmailService = class _EmailService {
       htmlBody
     }, supabaseClient);
   }
+  // Send email using provided template data directly (for testing)
+  async sendEmailWithTemplate(subjectTemplate, htmlBodyTemplate, textBodyTemplate, to, variables, supabaseClient) {
+    try {
+      const subject = this.substituteVariables(subjectTemplate, variables);
+      const htmlBody = this.substituteVariables(htmlBodyTemplate, variables);
+      const textBody = this.substituteVariables(textBodyTemplate, variables);
+      return this.sendEmail({
+        to,
+        subject,
+        htmlBody,
+        textBody
+      }, supabaseClient);
+    } catch (error) {
+      console.error("Error sending email with template:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to send email with template"
+      };
+    }
+  }
 };
 __publicField(_EmailService, "instance");
 let EmailService = _EmailService;
@@ -747,7 +783,7 @@ const EmailNotifications = ({
   }
   return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-      /* @__PURE__ */ jsx(Mail, { className: "h-6 w-6 text-learning-primary" }),
+      /* @__PURE__ */ jsx(Mail$1, { className: "h-6 w-6 text-learning-primary" }),
       /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Preferences" })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
@@ -1056,8 +1092,10 @@ function EmailTemplateManager({
       const sampleVariables = generateSampleVariables(template.type);
       const { EmailService: EmailService2 } = await Promise.resolve().then(() => emailService$1);
       const service = new EmailService2();
-      const result = await service.sendEmailFromTemplate(
-        template.type,
+      const result = await service.sendEmailWithTemplate(
+        template.subject_template,
+        template.html_body_template,
+        template.text_body_template || "",
         user.email,
         sampleVariables,
         supabaseClient
@@ -1264,8 +1302,8 @@ function EmailTemplateManager({
               size: "sm",
               onClick: () => handleSendTest(template),
               title: "Send Test Email",
-              className: "text-blue-600 hover:text-blue-700",
-              children: /* @__PURE__ */ jsx(Mail, { className: "h-4 w-4" })
+              className: "h-4 w-4",
+              children: /* @__PURE__ */ jsx(Send, { className: "h-4 w-4" })
             }
           ),
           /* @__PURE__ */ jsx(
@@ -1286,6 +1324,7 @@ function EmailTemplateManager({
               onClick: () => handleDelete(template),
               className: "text-red-600 hover:text-red-700",
               title: "Delete Template",
+              style: { backgroundColor: "orange", color: "white" },
               children: /* @__PURE__ */ jsx(Trash2, { className: "h-4 w-4" })
             }
           )
@@ -1482,7 +1521,7 @@ function RecentEmailNotifications({
         /* @__PURE__ */ jsx("p", { className: "text-muted-foreground", children: "View sent email notifications and their status" })
       ] }),
       /* @__PURE__ */ jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxs(Button, { variant: "outline", size: "sm", onClick: loadNotifications, children: [
-        /* @__PURE__ */ jsx(Mail, { className: "h-4 w-4 mr-2" }),
+        /* @__PURE__ */ jsx(Mail$1, { className: "h-4 w-4 mr-2" }),
         "Refresh"
       ] }) })
     ] }),
@@ -1526,7 +1565,7 @@ function RecentEmailNotifications({
       ] })
     ] }),
     filteredNotifications.length === 0 ? /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(CardContent, { className: "flex flex-col items-center justify-center py-12", children: [
-      /* @__PURE__ */ jsx(Mail, { className: "h-12 w-12 text-muted-foreground mb-4" }),
+      /* @__PURE__ */ jsx(Mail$1, { className: "h-12 w-12 text-muted-foreground mb-4" }),
       /* @__PURE__ */ jsx("h3", { className: "text-lg font-semibold mb-2", children: "No notifications found" }),
       /* @__PURE__ */ jsx("p", { className: "text-muted-foreground text-center", children: searchTerm || statusFilter !== "all" || typeFilter !== "all" ? "No notifications match your filters." : "No email notifications have been sent yet." })
     ] }) }) : /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-0", children: /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full", children: [
@@ -1589,7 +1628,7 @@ function RecentEmailNotifications({
         ] })
       ] }) }) }),
       /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsx(Mail, { className: "h-5 w-5 text-blue-600" }),
+        /* @__PURE__ */ jsx(Mail$1, { className: "h-5 w-5 text-blue-600" }),
         /* @__PURE__ */ jsxs("div", { children: [
           /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-blue-600", children: notifications.length }),
           /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Total" })
@@ -3679,7 +3718,7 @@ const NotificationSettings = ({
         /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-              /* @__PURE__ */ jsx(Mail, { className: "h-4 w-4 text-gray-500" }),
+              /* @__PURE__ */ jsx(Mail$1, { className: "h-4 w-4 text-gray-500" }),
               /* @__PURE__ */ jsx("span", { className: "text-sm", children: "Email Notifications" })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [

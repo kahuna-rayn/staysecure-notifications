@@ -6,7 +6,7 @@ import {
   Eye, 
   Trash2, 
   Copy,
-  Mail
+  Send
 } from 'lucide-react';
 
 interface EmailTemplate {
@@ -175,12 +175,15 @@ export default function EmailTemplateManager({
       // Generate sample variables based on template type
       const sampleVariables = generateSampleVariables(template.type);
       
-      // Use the EmailService to send test email
+      // Use the EmailService to send test email with the actual template data
       const { EmailService } = await import('../lib/emailService');
       const service = new EmailService();
       
-      const result = await service.sendEmailFromTemplate(
-        template.type,
+      // Use the actual template data instead of looking it up by type
+      const result = await service.sendEmailWithTemplate(
+        template.subject_template,
+        template.html_body_template,
+        template.text_body_template || '',
         user.email,
         sampleVariables,
         supabaseClient
@@ -433,14 +436,15 @@ export default function EmailTemplateManager({
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleSendTest(template)}
                             title="Send Test Email"
-                            className="text-blue-600 hover:text-blue-700"
+                            className="h-4 w-4"
                           >
-                            <Mail className="h-4 w-4" />
+                            <Send className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
@@ -457,6 +461,7 @@ export default function EmailTemplateManager({
                               onClick={() => handleDelete(template)}
                               className="text-red-600 hover:text-red-700"
                               title="Delete Template"
+                              style={{ backgroundColor: 'orange', color: 'white' }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

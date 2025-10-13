@@ -378,6 +378,36 @@ export class EmailService {
       htmlBody,
     }, supabaseClient);
   }
+
+  // Send email using provided template data directly (for testing)
+  async sendEmailWithTemplate(
+    subjectTemplate: string,
+    htmlBodyTemplate: string,
+    textBodyTemplate: string,
+    to: string,
+    variables: Record<string, any>,
+    supabaseClient?: any
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      // Substitute variables in templates
+      const subject = this.substituteVariables(subjectTemplate, variables);
+      const htmlBody = this.substituteVariables(htmlBodyTemplate, variables);
+      const textBody = this.substituteVariables(textBodyTemplate, variables);
+
+      return this.sendEmail({
+        to,
+        subject,
+        htmlBody,
+        textBody,
+      }, supabaseClient);
+    } catch (error: any) {
+      console.error('Error sending email with template:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to send email with template',
+      };
+    }
+  }
 }
 
 export const emailService = EmailService.getInstance();
