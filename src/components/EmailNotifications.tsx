@@ -157,8 +157,11 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   };
 
   const createPreferences = async (prefs: EmailPreferences) => {
+    // Get current user for audit fields
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+
     const dbPayload = {
-      user_id: prefs.userId, // NULL for org-level
+      user_id: null, // Always org-level
       email_enabled: prefs.emailEnabled,
       task_due_dates: prefs.taskDueDates,
       system_alerts: prefs.systemAlerts,
@@ -174,14 +177,17 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       upcoming_days_ahead: prefs.upcomingDaysAhead,
       max_reminder_attempts: prefs.maxReminderAttempts,
       reminder_frequency_days: prefs.reminderFrequencyDays,
+      // Audit fields
+      created_by: currentUser?.id || null,
+      updated_by: currentUser?.id || null,
     };
     
     const { error } = await supabase
       .from('email_preferences')
-      .upsert(dbPayload, { onConflict: 'user_id' });
+      .insert(dbPayload);
 
     if (error) {
-      console.error('Error upserting preferences:', error);
+      console.error('Error creating preferences:', error);
     }
   };
 
@@ -192,6 +198,9 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       userId: null // Always org-level settings
     };
     setPreferences(updatedPrefs);
+
+    // Get current user for audit fields
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
 
     const dbPayload = {
       user_id: null, // Always org-level settings
@@ -210,11 +219,15 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       upcoming_days_ahead: updatedPrefs.upcomingDaysAhead,
       max_reminder_attempts: updatedPrefs.maxReminderAttempts,
       reminder_frequency_days: updatedPrefs.reminderFrequencyDays,
+      // Audit fields
+      updated_by: currentUser?.id || null,
     };
 
+    // Update the existing org-level row (user_id IS NULL)
     const { error } = await supabase
       .from('email_preferences')
-      .upsert(dbPayload);
+      .update(dbPayload)
+      .is('user_id', null);
 
     if (error) {
       console.error('Error updating preferences:', error);
@@ -358,9 +371,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           <div className="flex items-center justify-between">
             <div className="text-left">
               <Label htmlFor="email-enabled">Enable Email Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                Receive notifications via email
-              </p>
             </div>
             <Switch
               id="email-enabled"

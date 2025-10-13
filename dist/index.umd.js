@@ -762,6 +762,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         // Always org-level settings
       };
       setPreferences(updatedPrefs);
+      const { data: { user: currentUser } } = await supabase2.auth.getUser();
       const dbPayload = {
         user_id: null,
         // Always org-level settings
@@ -779,9 +780,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         include_upcoming_lessons: updatedPrefs.includeUpcomingLessons,
         upcoming_days_ahead: updatedPrefs.upcomingDaysAhead,
         max_reminder_attempts: updatedPrefs.maxReminderAttempts,
-        reminder_frequency_days: updatedPrefs.reminderFrequencyDays
+        reminder_frequency_days: updatedPrefs.reminderFrequencyDays,
+        // Audit fields
+        updated_by: (currentUser == null ? void 0 : currentUser.id) || null
       };
-      const { error } = await supabase2.from("email_preferences").upsert(dbPayload);
+      const { error } = await supabase2.from("email_preferences").update(dbPayload).is("user_id", null);
       if (error) {
         console.error("Error updating preferences:", error);
       }
@@ -796,10 +799,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       ] }),
       /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-6", children: [
         /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-left", children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "email-enabled", children: "Enable Email Notifications" }),
-            /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-sm text-muted-foreground", children: "Receive notifications via email" })
-          ] }),
+          /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-left", children: /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "email-enabled", children: "Enable Email Notifications" }) }),
           /* @__PURE__ */ jsxRuntime.jsx(
             Switch,
             {
