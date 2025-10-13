@@ -379,7 +379,7 @@ export default function EmailTemplateManager({
         {isSuperAdmin ? (
           <div className="flex items-center space-x-2">
             <Button 
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-learning-primary hover:bg-learning-primary/90 text-learning-primary-foreground"
               onClick={handleCreate}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -556,91 +556,140 @@ export default function EmailTemplateManager({
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {isCreating ? 'Create Template' : isEditing ? 'Edit Template' : 'View Template'}: {selectedTemplate.name || 'New Template'}
+                {isCreating ? 'Create Template' : isEditing ? 'Edit Template' : 'Email Preview'}: {selectedTemplate.name || 'New Template'}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Template Name</Label>
-                  <Input
-                    id="name"
-                    value={selectedTemplate.name}
-                    disabled={!isEditing || selectedTemplate.is_system}
-                    onChange={(e) => setSelectedTemplate({
-                      ...selectedTemplate,
-                      name: e.target.value
-                    })}
-                  />
+            {isViewing ? (
+              /* Email Preview Mode */
+              <div className="space-y-4">
+                <div className="border rounded-lg p-4 bg-white">
+                  <div className="border-b pb-2 mb-4">
+                    <h3 className="font-semibold text-gray-700">Email Preview</h3>
+                    <p className="text-sm text-gray-500">How this email will appear to recipients</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Subject:</Label>
+                      <div className="mt-1 p-2 bg-gray-50 rounded border">
+                        {selectedTemplate.subject_template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+                          const sampleData = generateSampleVariables(selectedTemplate.type);
+                          return sampleData[key] || match;
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Email Body:</Label>
+                      <div className="mt-1 border rounded bg-white max-h-96 overflow-y-auto">
+                        <div 
+                          className="p-4 prose max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: selectedTemplate.html_body_template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+                              const sampleData = generateSampleVariables(selectedTemplate.type);
+                              return sampleData[key] || match;
+                            })
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="type">Template Type</Label>
-                  <Input
-                    id="type"
-                    value={selectedTemplate.type}
-                    disabled={!isEditing || selectedTemplate.is_system}
-                    onChange={(e) => setSelectedTemplate({
-                      ...selectedTemplate,
-                      type: e.target.value
-                    })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  value={selectedTemplate.subject_template}
-                  disabled={!isEditing}
-                  onChange={(e) => setSelectedTemplate({
-                    ...selectedTemplate,
-                    subject_template: e.target.value
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="content">HTML Content</Label>
-                <Textarea
-                  id="content"
-                  value={selectedTemplate.html_body_template}
-                  disabled={!isEditing}
-                  rows={10}
-                  className="font-mono text-sm"
-                  onChange={(e) => setSelectedTemplate({
-                    ...selectedTemplate,
-                    html_body_template: e.target.value
-                  })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="text-content">Text Content (Optional)</Label>
-                <Textarea
-                  id="text-content"
-                  value={selectedTemplate.text_body_template || ''}
-                  disabled={!isEditing}
-                  rows={5}
-                  className="font-mono text-sm"
-                  onChange={(e) => setSelectedTemplate({
-                    ...selectedTemplate,
-                    text_body_template: e.target.value
-                  })}
-                />
-              </div>
-              {isEditing && (
-                <div className="flex justify-end space-x-2">
+                
+                <div className="flex justify-end">
                   <Button variant="outline" onClick={() => {
-                    setIsEditing(false);
-                    setIsCreating(false);
+                    setIsViewing(false);
                     setSelectedTemplate(null);
                   }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave}>
-                    {isCreating ? 'Create' : 'Save'}
+                    Close Preview
                   </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              /* Edit/Create Mode */
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Template Name</Label>
+                    <Input
+                      id="name"
+                      value={selectedTemplate.name}
+                      disabled={!isEditing || selectedTemplate.is_system}
+                      onChange={(e) => setSelectedTemplate({
+                        ...selectedTemplate,
+                        name: e.target.value
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="type">Template Type</Label>
+                    <Input
+                      id="type"
+                      value={selectedTemplate.type}
+                      disabled={!isEditing || selectedTemplate.is_system}
+                      onChange={(e) => setSelectedTemplate({
+                        ...selectedTemplate,
+                        type: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input
+                    id="subject"
+                    value={selectedTemplate.subject_template}
+                    disabled={!isEditing}
+                    onChange={(e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      subject_template: e.target.value
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="content">HTML Content</Label>
+                  <Textarea
+                    id="content"
+                    value={selectedTemplate.html_body_template}
+                    disabled={!isEditing}
+                    rows={10}
+                    className="font-mono text-sm"
+                    onChange={(e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      html_body_template: e.target.value
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="text-content">Text Content (Optional)</Label>
+                  <Textarea
+                    id="text-content"
+                    value={selectedTemplate.text_body_template || ''}
+                    disabled={!isEditing}
+                    rows={5}
+                    className="font-mono text-sm"
+                    onChange={(e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      text_body_template: e.target.value
+                    })}
+                  />
+                </div>
+                {isEditing && (
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => {
+                      setIsEditing(false);
+                      setIsCreating(false);
+                      setSelectedTemplate(null);
+                    }}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSave}>
+                      {isCreating ? 'Create' : 'Save'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}

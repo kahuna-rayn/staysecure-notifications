@@ -1257,7 +1257,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         isSuperAdmin ? /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntime.jsxs(
           Button,
           {
-            className: "bg-green-600 hover:bg-green-700 text-white",
+            className: "bg-learning-primary hover:bg-learning-primary/90 text-learning-primary-foreground",
             onClick: handleCreate,
             children: [
               /* @__PURE__ */ jsxRuntime.jsx(Plus, { className: "h-4 w-4 mr-2" }),
@@ -1390,101 +1390,142 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         setSelectedTemplate(null);
       }, children: /* @__PURE__ */ jsxRuntime.jsxs(DialogContent, { className: "max-w-4xl max-h-[80vh] overflow-y-auto", children: [
         /* @__PURE__ */ jsxRuntime.jsx(DialogHeader, { children: /* @__PURE__ */ jsxRuntime.jsxs(DialogTitle, { children: [
-          isCreating ? "Create Template" : isEditing ? "Edit Template" : "View Template",
+          isCreating ? "Create Template" : isEditing ? "Edit Template" : "Email Preview",
           ": ",
           selectedTemplate.name || "New Template"
         ] }) }),
-        /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+        isViewing ? (
+          /* Email Preview Mode */
+          /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "border rounded-lg p-4 bg-white", children: [
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "border-b pb-2 mb-4", children: [
+                /* @__PURE__ */ jsxRuntime.jsx("h3", { className: "font-semibold text-gray-700", children: "Email Preview" }),
+                /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-sm text-gray-500", children: "How this email will appear to recipients" })
+              ] }),
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
+                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Subject:" }),
+                  /* @__PURE__ */ jsxRuntime.jsx("div", { className: "mt-1 p-2 bg-gray-50 rounded border", children: selectedTemplate.subject_template.replace(/\{\{(\w+)\}\}/g, (match2, key) => {
+                    const sampleData = generateSampleVariables(selectedTemplate.type);
+                    return sampleData[key] || match2;
+                  }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Email Body:" }),
+                  /* @__PURE__ */ jsxRuntime.jsx("div", { className: "mt-1 border rounded bg-white max-h-96 overflow-y-auto", children: /* @__PURE__ */ jsxRuntime.jsx(
+                    "div",
+                    {
+                      className: "p-4 prose max-w-none",
+                      dangerouslySetInnerHTML: {
+                        __html: selectedTemplate.html_body_template.replace(/\{\{(\w+)\}\}/g, (match2, key) => {
+                          const sampleData = generateSampleVariables(selectedTemplate.type);
+                          return sampleData[key] || match2;
+                        })
+                      }
+                    }
+                  ) })
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntime.jsx(Button, { variant: "outline", onClick: () => {
+              setIsViewing(false);
+              setSelectedTemplate(null);
+            }, children: "Close Preview" }) })
+          ] })
+        ) : (
+          /* Edit/Create Mode */
+          /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "name", children: "Template Name" }),
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Input,
+                  {
+                    id: "name",
+                    value: selectedTemplate.name,
+                    disabled: !isEditing || selectedTemplate.is_system,
+                    onChange: (e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      name: e.target.value
+                    })
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "type", children: "Template Type" }),
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Input,
+                  {
+                    id: "type",
+                    value: selectedTemplate.type,
+                    disabled: !isEditing || selectedTemplate.is_system,
+                    onChange: (e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      type: e.target.value
+                    })
+                  }
+                )
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "name", children: "Template Name" }),
+              /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "subject", children: "Subject" }),
               /* @__PURE__ */ jsxRuntime.jsx(
                 Input,
                 {
-                  id: "name",
-                  value: selectedTemplate.name,
-                  disabled: !isEditing || selectedTemplate.is_system,
+                  id: "subject",
+                  value: selectedTemplate.subject_template,
+                  disabled: !isEditing,
                   onChange: (e) => setSelectedTemplate({
                     ...selectedTemplate,
-                    name: e.target.value
+                    subject_template: e.target.value
                   })
                 }
               )
             ] }),
             /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "type", children: "Template Type" }),
+              /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "content", children: "HTML Content" }),
               /* @__PURE__ */ jsxRuntime.jsx(
-                Input,
+                Textarea,
                 {
-                  id: "type",
-                  value: selectedTemplate.type,
-                  disabled: !isEditing || selectedTemplate.is_system,
+                  id: "content",
+                  value: selectedTemplate.html_body_template,
+                  disabled: !isEditing,
+                  rows: 10,
+                  className: "font-mono text-sm",
                   onChange: (e) => setSelectedTemplate({
                     ...selectedTemplate,
-                    type: e.target.value
+                    html_body_template: e.target.value
                   })
                 }
               )
+            ] }),
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "text-content", children: "Text Content (Optional)" }),
+              /* @__PURE__ */ jsxRuntime.jsx(
+                Textarea,
+                {
+                  id: "text-content",
+                  value: selectedTemplate.text_body_template || "",
+                  disabled: !isEditing,
+                  rows: 5,
+                  className: "font-mono text-sm",
+                  onChange: (e) => setSelectedTemplate({
+                    ...selectedTemplate,
+                    text_body_template: e.target.value
+                  })
+                }
+              )
+            ] }),
+            isEditing && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex justify-end space-x-2", children: [
+              /* @__PURE__ */ jsxRuntime.jsx(Button, { variant: "outline", onClick: () => {
+                setIsEditing(false);
+                setIsCreating(false);
+                setSelectedTemplate(null);
+              }, children: "Cancel" }),
+              /* @__PURE__ */ jsxRuntime.jsx(Button, { onClick: handleSave, children: isCreating ? "Create" : "Save" })
             ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "subject", children: "Subject" }),
-            /* @__PURE__ */ jsxRuntime.jsx(
-              Input,
-              {
-                id: "subject",
-                value: selectedTemplate.subject_template,
-                disabled: !isEditing,
-                onChange: (e) => setSelectedTemplate({
-                  ...selectedTemplate,
-                  subject_template: e.target.value
-                })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "content", children: "HTML Content" }),
-            /* @__PURE__ */ jsxRuntime.jsx(
-              Textarea,
-              {
-                id: "content",
-                value: selectedTemplate.html_body_template,
-                disabled: !isEditing,
-                rows: 10,
-                className: "font-mono text-sm",
-                onChange: (e) => setSelectedTemplate({
-                  ...selectedTemplate,
-                  html_body_template: e.target.value
-                })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "text-content", children: "Text Content (Optional)" }),
-            /* @__PURE__ */ jsxRuntime.jsx(
-              Textarea,
-              {
-                id: "text-content",
-                value: selectedTemplate.text_body_template || "",
-                disabled: !isEditing,
-                rows: 5,
-                className: "font-mono text-sm",
-                onChange: (e) => setSelectedTemplate({
-                  ...selectedTemplate,
-                  text_body_template: e.target.value
-                })
-              }
-            )
-          ] }),
-          isEditing && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex justify-end space-x-2", children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Button, { variant: "outline", onClick: () => {
-              setIsEditing(false);
-              setIsCreating(false);
-              setSelectedTemplate(null);
-            }, children: "Cancel" }),
-            /* @__PURE__ */ jsxRuntime.jsx(Button, { onClick: handleSave, children: isCreating ? "Create" : "Save" })
           ] })
-        ] })
+        )
       ] }) })
     ] });
   }
