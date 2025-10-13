@@ -286,22 +286,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    * This source code is licensed under the ISC license.
    * See the LICENSE file in the root directory of this source tree.
    */
-  const Send = createLucideIcon("Send", [
-    [
-      "path",
-      {
-        d: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z",
-        key: "1ffxy3"
-      }
-    ],
-    ["path", { d: "m21.854 2.147-10.94 10.939", key: "12cjpa" }]
-  ]);
-  /**
-   * @license lucide-react v0.462.0 - ISC
-   *
-   * This source code is licensed under the ISC license.
-   * See the LICENSE file in the root directory of this source tree.
-   */
   const Settings = createLucideIcon("Settings", [
     [
       "path",
@@ -814,122 +798,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         console.error("Error loading reminder settings:", err);
       }
     };
-    const saveReminderSettings = async () => {
-      try {
-        setSavingReminders(true);
-        const { error: updateError } = await supabase2.from("lesson_reminder_config").update({
-          enabled: reminderSettings.enabled,
-          reminder_days_before: reminderSettings.reminder_days_before,
-          reminder_time: reminderSettings.reminder_time,
-          include_upcoming_lessons: reminderSettings.include_upcoming_lessons,
-          upcoming_days_ahead: reminderSettings.upcoming_days_ahead,
-          max_reminder_attempts: reminderSettings.max_reminder_attempts,
-          reminder_frequency_days: reminderSettings.reminder_frequency_days,
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        }).eq("id", "00000000-0000-0000-0000-000000000001");
-        if (updateError) throw updateError;
-        alert("Reminder settings saved successfully!");
-      } catch (err) {
-        console.error("Error saving reminder settings:", err);
-        alert(`Failed to save reminder settings: ${err.message}`);
-      } finally {
-        setSavingReminders(false);
-      }
-    };
-    const testReminders = async () => {
-      try {
-        setTestingReminders(true);
-        const { data, error } = await supabase2.functions.invoke("send-lesson-reminders", {
-          body: {
-            test: true,
-            email: user == null ? void 0 : user.email
-          }
-        });
-        if (error) throw error;
-        if (data && data.success) {
-          alert(`Test reminders sent successfully! Check your email at ${user == null ? void 0 : user.email}`);
-        } else {
-          alert(`Test failed: ${(data == null ? void 0 : data.message) || "Unknown error"}`);
-        }
-      } catch (err) {
-        console.error("Error testing reminders:", err);
-        alert(`Failed to send test reminders: ${err.message}`);
-      } finally {
-        setTestingReminders(false);
-      }
-    };
-    const sendTestEmail = async () => {
-      if (!user || !user.email) {
-        return;
-      }
-      setSending(true);
-      try {
-        let emailResult;
-        switch (testEmailType) {
-          case "lesson_reminder":
-            emailResult = await emailService.sendLessonReminder(
-              user.email,
-              "Introduction to Cybersecurity",
-              "2:00 PM today",
-              supabase2
-            );
-            break;
-          case "task_due":
-            emailResult = await emailService.sendTaskDueReminder(
-              user.email,
-              "Security Assessment Quiz",
-              "Tomorrow at 11:59 PM",
-              supabase2
-            );
-            break;
-          case "achievement":
-            emailResult = await emailService.sendAchievementEmail(
-              user.email,
-              "First Lesson Completed",
-              "You completed your first cybersecurity lesson!",
-              supabase2
-            );
-            break;
-          case "course_completion":
-            emailResult = await emailService.sendCourseCompletionEmail(
-              user.email,
-              "Cybersecurity Fundamentals",
-              supabase2
-            );
-            break;
-          case "system_alert":
-          default:
-            emailResult = await emailService.sendSystemAlert(
-              user.email,
-              "System Maintenance",
-              "Scheduled maintenance will occur tonight at 2 AM EST.",
-              supabase2
-            );
-            break;
-        }
-        if (emailResult.success) {
-          const { error } = await supabase2.from("email_notifications").insert({
-            user_id: user.id,
-            type: testEmailType,
-            title: "Test Email Notification",
-            message: `Test ${testEmailType} email sent successfully.`,
-            email: user.email,
-            status: "sent"
-          });
-          if (error) {
-            console.error("Error saving notification:", error);
-          }
-          alert("Test email sent successfully!");
-        } else {
-          alert(`Failed to send email: ${emailResult.error}`);
-        }
-      } catch (error) {
-        console.error("Error sending test email:", error);
-        alert("Error sending test email. Please check console for details.");
-      } finally {
-        setSending(false);
-      }
-    };
     if (loading) {
       return /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center justify-center p-8", children: /* @__PURE__ */ jsxRuntime.jsx("div", { className: "animate-spin rounded-full h-8 w-8 border-b-2 border-learning-primary" }) });
     }
@@ -952,6 +820,44 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               onCheckedChange: (checked) => updatePreferences({ emailEnabled: checked })
             }
           )
+        ] }),
+        (preferences == null ? void 0 : preferences.emailEnabled) && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4 pl-4 border-l-2 border-blue-200", children: [
+          /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "max-attempts", className: "text-sm", children: "Max Reminder Attempts" }),
+            /* @__PURE__ */ jsxRuntime.jsx(
+              Input,
+              {
+                id: "max-attempts",
+                type: "number",
+                min: "1",
+                max: "10",
+                value: reminderSettings.max_reminder_attempts,
+                onChange: (e) => setReminderSettings((prev) => ({
+                  ...prev,
+                  max_reminder_attempts: parseInt(e.target.value) || 3
+                })),
+                className: "mt-1"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-frequency", className: "text-sm", children: "Reminder Frequency (Days)" }),
+            /* @__PURE__ */ jsxRuntime.jsx(
+              Input,
+              {
+                id: "reminder-frequency",
+                type: "number",
+                min: "1",
+                max: "30",
+                value: reminderSettings.reminder_frequency_days,
+                onChange: (e) => setReminderSettings((prev) => ({
+                  ...prev,
+                  reminder_frequency_days: parseInt(e.target.value) || 7
+                })),
+                className: "mt-1"
+              }
+            )
+          ] })
         ] }),
         (preferences == null ? void 0 : preferences.emailEnabled) && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntime.jsx("h4", { className: "font-medium", children: "Notification Types" }),
@@ -1076,69 +982,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                   }
                 )
               ] }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4 border-t pt-4 mt-4", children: [
-              /* @__PURE__ */ jsxRuntime.jsx("h4", { className: "font-medium text-gray-900", children: "Reminder Limits" }),
-              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "max-attempts", className: "text-sm", children: "Max Reminder Attempts" }),
-                  /* @__PURE__ */ jsxRuntime.jsx(
-                    Input,
-                    {
-                      id: "max-attempts",
-                      type: "number",
-                      min: "1",
-                      max: "10",
-                      value: reminderSettings.max_reminder_attempts,
-                      onChange: (e) => setReminderSettings((prev) => ({
-                        ...prev,
-                        max_reminder_attempts: parseInt(e.target.value) || 3
-                      })),
-                      className: "mt-1"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-frequency", className: "text-sm", children: "Reminder Frequency (Days)" }),
-                  /* @__PURE__ */ jsxRuntime.jsx(
-                    Input,
-                    {
-                      id: "reminder-frequency",
-                      type: "number",
-                      min: "1",
-                      max: "30",
-                      value: reminderSettings.reminder_frequency_days,
-                      onChange: (e) => setReminderSettings((prev) => ({
-                        ...prev,
-                        reminder_frequency_days: parseInt(e.target.value) || 7
-                      })),
-                      className: "mt-1"
-                    }
-                  )
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex gap-2 pt-2", children: [
-                /* @__PURE__ */ jsxRuntime.jsx(
-                  Button,
-                  {
-                    onClick: saveReminderSettings,
-                    disabled: savingReminders,
-                    size: "sm",
-                    className: "bg-blue-600 hover:bg-blue-700",
-                    children: savingReminders ? "Saving..." : "Save Settings"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntime.jsx(
-                  Button,
-                  {
-                    onClick: testReminders,
-                    disabled: testingReminders,
-                    variant: "outline",
-                    size: "sm",
-                    children: testingReminders ? "Testing..." : "Send Test"
-                  }
-                )
-              ] })
             ] })
           ] })
         ] }),
@@ -1179,36 +1022,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 }
               )
             ] })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxRuntime.jsx("h4", { className: "font-medium", children: "Test Email Notifications" }),
-          /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center gap-4", children: [
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { children: "Email Type" }),
-              /* @__PURE__ */ jsxRuntime.jsxs(Select, { value: testEmailType, onValueChange: setTestEmailType, children: [
-                /* @__PURE__ */ jsxRuntime.jsx(SelectTrigger, { children: /* @__PURE__ */ jsxRuntime.jsx(SelectValue, {}) }),
-                /* @__PURE__ */ jsxRuntime.jsxs(SelectContent, { children: [
-                  /* @__PURE__ */ jsxRuntime.jsx(SelectItem, { value: "system_alert", children: "System Alert" }),
-                  /* @__PURE__ */ jsxRuntime.jsx(SelectItem, { value: "lesson_reminder", children: "Lesson Reminder" }),
-                  /* @__PURE__ */ jsxRuntime.jsx(SelectItem, { value: "task_due", children: "Task Due Date" }),
-                  /* @__PURE__ */ jsxRuntime.jsx(SelectItem, { value: "achievement", children: "Achievement" }),
-                  /* @__PURE__ */ jsxRuntime.jsx(SelectItem, { value: "course_completion", children: "Course Completion" })
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntime.jsxs(
-              Button,
-              {
-                onClick: sendTestEmail,
-                disabled: sending || !(preferences == null ? void 0 : preferences.emailEnabled),
-                className: "flex items-center gap-2",
-                children: [
-                  sending ? /* @__PURE__ */ jsxRuntime.jsx("div", { className: "animate-spin rounded-full h-4 w-4 border-b-2 border-white" }) : /* @__PURE__ */ jsxRuntime.jsx(Send, { className: "h-4 w-4" }),
-                  "Send Test Email"
-                ]
-              }
-            )
           ] })
         ] })
       ] })

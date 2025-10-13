@@ -409,6 +409,43 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
             />
           </div>
 
+          {/* Reminder Limits - Right below Enable Email Toggle */}
+          {preferences?.emailEnabled && (
+            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-blue-200">
+              <div>
+                <Label htmlFor="max-attempts" className="text-sm">Max Reminder Attempts</Label>
+                <Input
+                  id="max-attempts"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={reminderSettings.max_reminder_attempts}
+                  onChange={(e) => setReminderSettings(prev => ({ 
+                    ...prev, 
+                    max_reminder_attempts: parseInt(e.target.value) || 3 
+                  }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="reminder-frequency" className="text-sm">Reminder Frequency (Days)</Label>
+                <Input
+                  id="reminder-frequency"
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={reminderSettings.reminder_frequency_days}
+                  onChange={(e) => setReminderSettings(prev => ({ 
+                    ...prev, 
+                    reminder_frequency_days: parseInt(e.target.value) || 7 
+                  }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+
           {/* Notification Type Preferences */}
           {preferences?.emailEnabled && (
             <div className="space-y-4">
@@ -527,60 +564,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                   )}
                 </div>
 
-                {/* Reminder Limits */}
-                <div className="space-y-4 border-t pt-4 mt-4">
-                  <h4 className="font-medium text-gray-900">Reminder Limits</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="max-attempts" className="text-sm">Max Reminder Attempts</Label>
-                      <Input
-                        id="max-attempts"
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={reminderSettings.max_reminder_attempts}
-                        onChange={(e) => setReminderSettings(prev => ({ 
-                          ...prev, 
-                          max_reminder_attempts: parseInt(e.target.value) || 3 
-                        }))}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reminder-frequency" className="text-sm">Reminder Frequency (Days)</Label>
-                      <Input
-                        id="reminder-frequency"
-                        type="number"
-                        min="1"
-                        max="30"
-                        value={reminderSettings.reminder_frequency_days}
-                        onChange={(e) => setReminderSettings(prev => ({ 
-                          ...prev, 
-                          reminder_frequency_days: parseInt(e.target.value) || 7 
-                        }))}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={saveReminderSettings}
-                      disabled={savingReminders}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {savingReminders ? 'Saving...' : 'Save Settings'}
-                    </Button>
-                    <Button
-                      onClick={testReminders}
-                      disabled={testingReminders}
-                      variant="outline"
-                      size="sm"
-                    >
-                      {testingReminders ? 'Testing...' : 'Send Test'}
-                    </Button>
-                  </div>
-                </div>
               </div>
             </div>
           )}
@@ -620,40 +603,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Test Email Section */}
-          <div className="space-y-4">
-            <h4 className="font-medium">Test Email Notifications</h4>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <Label>Email Type</Label>
-                <Select value={testEmailType} onValueChange={setTestEmailType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="system_alert">System Alert</SelectItem>
-                    <SelectItem value="lesson_reminder">Lesson Reminder</SelectItem>
-                    <SelectItem value="task_due">Task Due Date</SelectItem>
-                    <SelectItem value="achievement">Achievement</SelectItem>
-                    <SelectItem value="course_completion">Course Completion</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={sendTestEmail}
-                disabled={sending || !preferences?.emailEnabled}
-                className="flex items-center gap-2"
-              >
-                {sending ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                Send Test Email
-              </Button>
-            </div>
           </div>
         </div>
       </div>
