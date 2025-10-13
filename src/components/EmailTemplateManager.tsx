@@ -82,6 +82,7 @@ export default function EmailTemplateManager({
   PopoverTrigger,
   isSuperAdmin = false
 }: EmailTemplateManagerProps) {
+  console.log('EmailTemplateManager - isSuperAdmin:', isSuperAdmin);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -376,7 +377,7 @@ export default function EmailTemplateManager({
           <h2 className="text-2xl font-bold text-learning-primary">Email Template Management</h2>
           <p className="text-muted-foreground">Create and manage email templates</p>
         </div>
-        {isSuperAdmin && (
+        {isSuperAdmin ? (
           <div className="flex items-center space-x-2">
             <Button 
               className="bg-learning-primary hover:bg-learning-primary/90"
@@ -385,6 +386,10 @@ export default function EmailTemplateManager({
               <Plus className="h-4 w-4 mr-2" />
               Create Template
             </Button>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            Template creation requires Super Admin access
           </div>
         )}
       </div>
@@ -515,7 +520,6 @@ export default function EmailTemplateManager({
                             size="sm"
                             onClick={() => handleSendTest(template)}
                             title="Send Test Email"
-                            className="text-blue-600 hover:text-blue-700"
                           >
                             <Send className="h-4 w-4" />
                           </Button>
