@@ -50,6 +50,7 @@ interface EmailTemplateManagerProps {
   Popover: any;
   PopoverContent: any;
   PopoverTrigger: any;
+  isSuperAdmin?: boolean;
 }
 
 export default function EmailTemplateManager({
@@ -78,7 +79,8 @@ export default function EmailTemplateManager({
   Textarea,
   Popover,
   PopoverContent,
-  PopoverTrigger
+  PopoverTrigger,
+  isSuperAdmin = false
 }: EmailTemplateManagerProps) {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,7 @@ export default function EmailTemplateManager({
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Load templates
   useEffect(() => {
@@ -196,6 +199,64 @@ export default function EmailTemplateManager({
       }
     } catch (err: any) {
       alert(`Error sending test email: ${err.message}`);
+    }
+  };
+
+  const handleCreate = () => {
+    setSelectedTemplate({
+      id: '',
+      name: '',
+      type: '',
+      subject_template: '',
+      html_body_template: '',
+      text_body_template: '',
+      is_system: false,
+      is_active: true,
+      created_at: new Date().toISOString()
+    });
+    setIsCreating(true);
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!selectedTemplate) return;
+
+    try {
+      const templateData = {
+        name: selectedTemplate.name,
+        type: selectedTemplate.type,
+        subject_template: selectedTemplate.subject_template,
+        html_body_template: selectedTemplate.html_body_template,
+        text_body_template: selectedTemplate.text_body_template,
+        is_system: selectedTemplate.is_system,
+        is_active: selectedTemplate.is_active
+      };
+
+      if (isCreating) {
+        // Create new template
+        const { error } = await supabaseClient
+          .from('email_templates')
+          .insert(templateData);
+        
+        if (error) throw error;
+        alert('Template created successfully');
+      } else {
+        // Update existing template
+        const { error } = await supabaseClient
+          .from('email_templates')
+          .update(templateData)
+          .eq('id', selectedTemplate.id);
+        
+        if (error) throw error;
+        alert('Template updated successfully');
+      }
+
+      setIsEditing(false);
+      setIsCreating(false);
+      setSelectedTemplate(null);
+      loadTemplates();
+    } catch (err: any) {
+      alert(`Error saving template: ${err.message}`);
     }
   };
 
@@ -315,12 +376,17 @@ export default function EmailTemplateManager({
           <h2 className="text-2xl font-bold text-learning-primary">Email Template Management</h2>
           <p className="text-muted-foreground">Create and manage email templates</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button className="bg-learning-primary hover:bg-learning-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Template
-          </Button>
-        </div>
+        {isSuperAdmin && (
+          <div className="flex items-center space-x-2">
+            <Button 
+              className="bg-learning-primary hover:bg-learning-primary/90"
+              onClick={handleCreate}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Template
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -423,6 +489,14 @@ export default function EmailTemplateManager({
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleEdit(template)}
+                            title="Edit Template"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleView(template)}
                             title="View Template"
                           >
@@ -431,28 +505,19 @@ export default function EmailTemplateManager({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEdit(template)}
-                            title="Edit Template"
+                            onClick={() => handleDuplicate(template)}
+                            title="Duplicate Template"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Copy className="h-4 w-4" />
                           </Button>
-
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleSendTest(template)}
                             title="Send Test Email"
-                            className="h-4 w-4"
+                            className="text-blue-600 hover:text-blue-700"
                           >
                             <Send className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDuplicate(template)}
-                            title="Duplicate Template"
-                          >
-                            <Copy className="h-4 w-4" />
                           </Button>
                           {!template.is_system && (
                             <Button
@@ -482,12 +547,13 @@ export default function EmailTemplateManager({
         <Dialog open={isEditing || isViewing} onOpenChange={() => {
           setIsEditing(false);
           setIsViewing(false);
+          setIsCreating(false);
           setSelectedTemplate(null);
         }}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {isEditing ? 'Edit Template' : 'View Template'}: {selectedTemplate.name}
+                {isCreating ? 'Create Template' : isEditing ? 'Edit Template' : 'View Template'}: {selectedTemplate.name || 'New Template'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
@@ -498,6 +564,10 @@ export default function EmailTemplateManager({
                     id="name"
                     value={selectedTemplate.name}
                     disabled={!isEditing || selectedTemplate.is_system}
+                    onChange={(e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      name: e.target.value
+                    })}
                   />
                 </div>
                 <div>
@@ -506,6 +576,10 @@ export default function EmailTemplateManager({
                     id="type"
                     value={selectedTemplate.type}
                     disabled={!isEditing || selectedTemplate.is_system}
+                    onChange={(e) => setSelectedTemplate({
+                      ...selectedTemplate,
+                      type: e.target.value
+                    })}
                   />
                 </div>
               </div>
@@ -515,32 +589,51 @@ export default function EmailTemplateManager({
                   id="subject"
                   value={selectedTemplate.subject_template}
                   disabled={!isEditing}
+                  onChange={(e) => setSelectedTemplate({
+                    ...selectedTemplate,
+                    subject_template: e.target.value
+                  })}
                 />
               </div>
               <div>
-                <Label htmlFor="content">Content</Label>
+                <Label htmlFor="content">HTML Content</Label>
                 <Textarea
                   id="content"
                   value={selectedTemplate.html_body_template}
                   disabled={!isEditing}
                   rows={10}
                   className="font-mono text-sm"
+                  onChange={(e) => setSelectedTemplate({
+                    ...selectedTemplate,
+                    html_body_template: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="text-content">Text Content (Optional)</Label>
+                <Textarea
+                  id="text-content"
+                  value={selectedTemplate.text_body_template || ''}
+                  disabled={!isEditing}
+                  rows={5}
+                  className="font-mono text-sm"
+                  onChange={(e) => setSelectedTemplate({
+                    ...selectedTemplate,
+                    text_body_template: e.target.value
+                  })}
                 />
               </div>
               {isEditing && (
                 <div className="flex justify-end space-x-2">
                   <Button variant="outline" onClick={() => {
                     setIsEditing(false);
+                    setIsCreating(false);
                     setSelectedTemplate(null);
                   }}>
                     Cancel
                   </Button>
-                  <Button onClick={() => {
-                    // TODO: Implement save functionality
-                    setIsEditing(false);
-                    setSelectedTemplate(null);
-                  }}>
-                    Save Changes
+                  <Button onClick={handleSave}>
+                    {isCreating ? 'Create' : 'Save'}
                   </Button>
                 </div>
               )}

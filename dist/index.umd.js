@@ -1017,7 +1017,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Textarea,
     Popover,
     PopoverContent,
-    PopoverTrigger
+    PopoverTrigger,
+    isSuperAdmin = false
   }) {
     const [templates, setTemplates] = react.useState([]);
     const [loading, setLoading] = react.useState(true);
@@ -1028,6 +1029,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const [selectedTemplate, setSelectedTemplate] = react.useState(null);
     const [isEditing, setIsEditing] = react.useState(false);
     const [isViewing, setIsViewing] = react.useState(false);
+    const [isCreating, setIsCreating] = react.useState(false);
     react.useEffect(() => {
       loadTemplates();
     }, []);
@@ -1107,6 +1109,50 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       } catch (err) {
         alert(`Error sending test email: ${err.message}`);
+      }
+    };
+    const handleCreate = () => {
+      setSelectedTemplate({
+        id: "",
+        name: "",
+        type: "",
+        subject_template: "",
+        html_body_template: "",
+        text_body_template: "",
+        is_system: false,
+        is_active: true,
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      setIsCreating(true);
+      setIsEditing(true);
+    };
+    const handleSave = async () => {
+      if (!selectedTemplate) return;
+      try {
+        const templateData = {
+          name: selectedTemplate.name,
+          type: selectedTemplate.type,
+          subject_template: selectedTemplate.subject_template,
+          html_body_template: selectedTemplate.html_body_template,
+          text_body_template: selectedTemplate.text_body_template,
+          is_system: selectedTemplate.is_system,
+          is_active: selectedTemplate.is_active
+        };
+        if (isCreating) {
+          const { error: error2 } = await supabaseClient.from("email_templates").insert(templateData);
+          if (error2) throw error2;
+          alert("Template created successfully");
+        } else {
+          const { error: error2 } = await supabaseClient.from("email_templates").update(templateData).eq("id", selectedTemplate.id);
+          if (error2) throw error2;
+          alert("Template updated successfully");
+        }
+        setIsEditing(false);
+        setIsCreating(false);
+        setSelectedTemplate(null);
+        loadTemplates();
+      } catch (err) {
+        alert(`Error saving template: ${err.message}`);
       }
     };
     const generateSampleVariables = (templateType) => {
@@ -1208,10 +1254,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           /* @__PURE__ */ jsxRuntime.jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
           /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-muted-foreground", children: "Create and manage email templates" })
         ] }),
-        /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntime.jsxs(Button, { className: "bg-learning-primary hover:bg-learning-primary/90", children: [
-          /* @__PURE__ */ jsxRuntime.jsx(Plus, { className: "h-4 w-4 mr-2" }),
-          "Create Template"
-        ] }) })
+        isSuperAdmin && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntime.jsxs(
+          Button,
+          {
+            className: "bg-learning-primary hover:bg-learning-primary/90",
+            onClick: handleCreate,
+            children: [
+              /* @__PURE__ */ jsxRuntime.jsx(Plus, { className: "h-4 w-4 mr-2" }),
+              "Create Template"
+            ]
+          }
+        ) })
       ] }),
       /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex flex-col sm:flex-row gap-4", children: [
         /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "relative", children: [
@@ -1280,16 +1333,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               {
                 variant: "outline",
                 size: "sm",
-                onClick: () => handleView(template),
-                title: "View Template",
-                children: /* @__PURE__ */ jsxRuntime.jsx(Eye, { className: "h-4 w-4" })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntime.jsx(
-              Button,
-              {
-                variant: "outline",
-                size: "sm",
                 onClick: () => handleEdit(template),
                 title: "Edit Template",
                 children: /* @__PURE__ */ jsxRuntime.jsx(SquarePen, { className: "h-4 w-4" })
@@ -1300,10 +1343,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               {
                 variant: "outline",
                 size: "sm",
-                onClick: () => handleSendTest(template),
-                title: "Send Test Email",
-                className: "h-4 w-4",
-                children: /* @__PURE__ */ jsxRuntime.jsx(Send, { className: "h-4 w-4" })
+                onClick: () => handleView(template),
+                title: "View Template",
+                children: /* @__PURE__ */ jsxRuntime.jsx(Eye, { className: "h-4 w-4" })
               }
             ),
             /* @__PURE__ */ jsxRuntime.jsx(
@@ -1314,6 +1356,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 onClick: () => handleDuplicate(template),
                 title: "Duplicate Template",
                 children: /* @__PURE__ */ jsxRuntime.jsx(Copy, { className: "h-4 w-4" })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntime.jsx(
+              Button,
+              {
+                variant: "outline",
+                size: "sm",
+                onClick: () => handleSendTest(template),
+                title: "Send Test Email",
+                className: "text-blue-600 hover:text-blue-700",
+                children: /* @__PURE__ */ jsxRuntime.jsx(Send, { className: "h-4 w-4" })
               }
             ),
             !template.is_system && /* @__PURE__ */ jsxRuntime.jsx(
@@ -1334,12 +1387,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       (isEditing || isViewing) && selectedTemplate && /* @__PURE__ */ jsxRuntime.jsx(Dialog, { open: isEditing || isViewing, onOpenChange: () => {
         setIsEditing(false);
         setIsViewing(false);
+        setIsCreating(false);
         setSelectedTemplate(null);
       }, children: /* @__PURE__ */ jsxRuntime.jsxs(DialogContent, { className: "max-w-4xl max-h-[80vh] overflow-y-auto", children: [
         /* @__PURE__ */ jsxRuntime.jsx(DialogHeader, { children: /* @__PURE__ */ jsxRuntime.jsxs(DialogTitle, { children: [
-          isEditing ? "Edit Template" : "View Template",
+          isCreating ? "Create Template" : isEditing ? "Edit Template" : "View Template",
           ": ",
-          selectedTemplate.name
+          selectedTemplate.name || "New Template"
         ] }) }),
         /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
@@ -1350,7 +1404,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 {
                   id: "name",
                   value: selectedTemplate.name,
-                  disabled: !isEditing || selectedTemplate.is_system
+                  disabled: !isEditing || selectedTemplate.is_system,
+                  onChange: (e) => setSelectedTemplate({
+                    ...selectedTemplate,
+                    name: e.target.value
+                  })
                 }
               )
             ] }),
@@ -1361,7 +1419,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 {
                   id: "type",
                   value: selectedTemplate.type,
-                  disabled: !isEditing || selectedTemplate.is_system
+                  disabled: !isEditing || selectedTemplate.is_system,
+                  onChange: (e) => setSelectedTemplate({
+                    ...selectedTemplate,
+                    type: e.target.value
+                  })
                 }
               )
             ] })
@@ -1373,12 +1435,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               {
                 id: "subject",
                 value: selectedTemplate.subject_template,
-                disabled: !isEditing
+                disabled: !isEditing,
+                onChange: (e) => setSelectedTemplate({
+                  ...selectedTemplate,
+                  subject_template: e.target.value
+                })
               }
             )
           ] }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "content", children: "Content" }),
+            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "content", children: "HTML Content" }),
             /* @__PURE__ */ jsxRuntime.jsx(
               Textarea,
               {
@@ -1386,19 +1452,38 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 value: selectedTemplate.html_body_template,
                 disabled: !isEditing,
                 rows: 10,
-                className: "font-mono text-sm"
+                className: "font-mono text-sm",
+                onChange: (e) => setSelectedTemplate({
+                  ...selectedTemplate,
+                  html_body_template: e.target.value
+                })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "text-content", children: "Text Content (Optional)" }),
+            /* @__PURE__ */ jsxRuntime.jsx(
+              Textarea,
+              {
+                id: "text-content",
+                value: selectedTemplate.text_body_template || "",
+                disabled: !isEditing,
+                rows: 5,
+                className: "font-mono text-sm",
+                onChange: (e) => setSelectedTemplate({
+                  ...selectedTemplate,
+                  text_body_template: e.target.value
+                })
               }
             )
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex justify-end space-x-2", children: [
             /* @__PURE__ */ jsxRuntime.jsx(Button, { variant: "outline", onClick: () => {
               setIsEditing(false);
+              setIsCreating(false);
               setSelectedTemplate(null);
             }, children: "Cancel" }),
-            /* @__PURE__ */ jsxRuntime.jsx(Button, { onClick: () => {
-              setIsEditing(false);
-              setSelectedTemplate(null);
-            }, children: "Save Changes" })
+            /* @__PURE__ */ jsxRuntime.jsx(Button, { onClick: handleSave, children: isCreating ? "Create" : "Save" })
           ] })
         ] })
       ] }) })
