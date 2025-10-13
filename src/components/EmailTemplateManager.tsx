@@ -162,6 +162,98 @@ export default function EmailTemplateManager({
     }
   };
 
+  const handleSendTest = async (template: EmailTemplate) => {
+    try {
+      // Get current user's email for testing
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user?.email) {
+        alert('No user email found for testing');
+        return;
+      }
+
+      // Generate sample variables based on template type
+      const sampleVariables = generateSampleVariables(template.type);
+      
+      // Use the EmailService to send test email
+      const { EmailService } = await import('../lib/emailService');
+      const service = new EmailService();
+      
+      const result = await service.sendEmailFromTemplate(
+        template.type,
+        user.email,
+        sampleVariables,
+        supabaseClient
+      );
+
+      if (result.success) {
+        alert(`Test email sent successfully to ${user.email}`);
+      } else {
+        alert(`Failed to send test email: ${result.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error sending test email: ${err.message}`);
+    }
+  };
+
+  const generateSampleVariables = (templateType: string) => {
+    const baseVariables = {
+      user_name: 'John Doe',
+      lesson_title: 'Introduction to Cybersecurity',
+      learning_track_title: 'Cybersecurity Fundamentals',
+      lesson_description: 'Learn the basics of cybersecurity and how to protect digital assets.',
+      completion_date: new Date().toLocaleDateString('en-US'),
+      completion_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      available_date: new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      reminder_type: 'Available Now',
+      lesson_url: 'http://localhost:8080/#/lesson/sample-lesson-id'
+    };
+
+    switch (templateType) {
+      case 'lesson_completed':
+        return {
+          ...baseVariables,
+          lessons_completed_in_track: 5,
+          total_lessons_in_track: 10,
+          track_progress_percentage: 50,
+          next_lesson_title: 'Advanced Security Concepts',
+          next_lesson_available: true,
+          next_lesson_url: 'http://localhost:8080/#/lesson/next-lesson-id'
+        };
+      case 'track_milestone_50':
+        return {
+          ...baseVariables,
+          milestone_percentage: 50,
+          lessons_completed: 5,
+          total_lessons: 10,
+          time_spent_hours: 12,
+          continue_learning_url: 'http://localhost:8080/#/dashboard'
+        };
+      case 'quiz_high_score':
+        return {
+          ...baseVariables,
+          quiz_title: 'Cybersecurity Basics Quiz',
+          score: 95,
+          correct_answers: 19,
+          total_questions: 20,
+          view_results_url: 'http://localhost:8080/#/quiz/results',
+          continue_learning_url: 'http://localhost:8080/#/dashboard'
+        };
+      case 'lesson_reminder':
+        return {
+          ...baseVariables,
+          lesson_description: 'Learn the basics of cybersecurity and how to protect digital assets.',
+          reminder_type: 'Available Now'
+        };
+      default:
+        return baseVariables;
+    }
+  };
+
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = 
       template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -328,6 +420,7 @@ export default function EmailTemplateManager({
                             variant="outline"
                             size="sm"
                             onClick={() => handleView(template)}
+                            title="View Template"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -335,13 +428,24 @@ export default function EmailTemplateManager({
                             variant="outline"
                             size="sm"
                             onClick={() => handleEdit(template)}
+                            title="Edit Template"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleSendTest(template)}
+                            title="Send Test Email"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleDuplicate(template)}
+                            title="Duplicate Template"
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -351,6 +455,7 @@ export default function EmailTemplateManager({
                               size="sm"
                               onClick={() => handleDelete(template)}
                               className="text-red-600 hover:text-red-700"
+                              title="Delete Template"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
