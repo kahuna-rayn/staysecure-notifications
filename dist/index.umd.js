@@ -667,6 +667,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const EmailNotifications = ({
     supabase: supabase2,
     user,
+    // Keep for now for auth context, but not used for preferences
     awsConfig,
     Button,
     Card,
@@ -685,19 +686,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Textarea
   }) => {
     const [preferences, setPreferences] = react.useState(null);
-    const [reminderSettings, setReminderSettings] = react.useState({
-      enabled: true,
-      reminder_days_before: 1,
-      reminder_time: "09:00:00",
-      include_upcoming_lessons: true,
-      upcoming_days_ahead: 3,
-      max_reminder_attempts: 3,
-      reminder_frequency_days: 7
-    });
     const [loading, setLoading] = react.useState(true);
     const [sending, setSending] = react.useState(false);
-    const [savingReminders, setSavingReminders] = react.useState(false);
-    const [testingReminders, setTestingReminders] = react.useState(false);
     const [testEmailType, setTestEmailType] = react.useState("system_alert");
     react.useEffect(() => {
       if (awsConfig) {
@@ -705,21 +695,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }, [awsConfig]);
     react.useEffect(() => {
-      if (user) {
-        loadPreferences();
-        loadReminderSettings();
-      }
-    }, [user]);
+      loadPreferences();
+    }, []);
     const loadPreferences = async () => {
       try {
-        const { data, error } = await supabase2.from("email_preferences").select("*").eq("user_id", user == null ? void 0 : user.id).single();
+        const { data, error } = await supabase2.from("email_preferences").select("*").is("user_id", null).single();
         if (error && error.code !== "PGRST116") {
           console.error("Error loading preferences:", error);
           return;
         }
         if (data) {
           const mappedData = {
+            id: data.id,
             userId: data.user_id,
+            // Will be null for org-level
             emailEnabled: data.email_enabled,
             taskDueDates: data.task_due_dates,
             systemAlerts: data.system_alerts,
@@ -727,12 +716,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             courseCompletions: data.course_completions,
             quietHoursEnabled: data.quiet_hours_enabled,
             quietHoursStart: data.quiet_hours_start_time,
-            quietHoursEnd: data.quiet_hours_end_time
+            quietHoursEnd: data.quiet_hours_end_time,
+            // Reminder settings (now part of the same table)
+            reminderDaysBefore: data.reminder_days_before,
+            reminderTime: data.reminder_time,
+            includeUpcomingLessons: data.include_upcoming_lessons,
+            upcomingDaysAhead: data.upcoming_days_ahead,
+            maxReminderAttempts: data.max_reminder_attempts,
+            reminderFrequencyDays: data.reminder_frequency_days
           };
           setPreferences(mappedData);
         } else {
           const defaultPrefs = {
-            userId: (user == null ? void 0 : user.id) || "",
+            userId: null,
+            // Org-level settings
             emailEnabled: true,
             taskDueDates: false,
             systemAlerts: false,
@@ -740,7 +737,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             courseCompletions: true,
             quietHoursEnabled: false,
             quietHoursStart: "22:00",
-            quietHoursEnd: "08:00"
+            quietHoursEnd: "08:00",
+            // Default reminder settings
+            reminderDaysBefore: 0,
+            reminderTime: "09:00",
+            includeUpcomingLessons: true,
+            upcomingDaysAhead: 3,
+            maxReminderAttempts: 3,
+            reminderFrequencyDays: 7
           };
           setPreferences(defaultPrefs);
         }
@@ -754,13 +758,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const updatedPrefs = {
         ...preferences,
         ...updates,
-        userId: user.id
-        // Always use current user ID
+        userId: null
+        // Always org-level settings
       };
       setPreferences(updatedPrefs);
       const dbPayload = {
-        user_id: user.id,
-        // Always use current user ID
+        user_id: null,
+        // Always org-level settings
         email_enabled: updatedPrefs.emailEnabled,
         task_due_dates: updatedPrefs.taskDueDates,
         system_alerts: updatedPrefs.systemAlerts,
@@ -768,34 +772,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         course_completions: updatedPrefs.courseCompletions,
         quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
         quiet_hours_start_time: updatedPrefs.quietHoursStart,
-        quiet_hours_end_time: updatedPrefs.quietHoursEnd
+        quiet_hours_end_time: updatedPrefs.quietHoursEnd,
+        // Reminder settings (consolidated)
+        reminder_days_before: updatedPrefs.reminderDaysBefore,
+        reminder_time: updatedPrefs.reminderTime,
+        include_upcoming_lessons: updatedPrefs.includeUpcomingLessons,
+        upcoming_days_ahead: updatedPrefs.upcomingDaysAhead,
+        max_reminder_attempts: updatedPrefs.maxReminderAttempts,
+        reminder_frequency_days: updatedPrefs.reminderFrequencyDays
       };
       const { error } = await supabase2.from("email_preferences").upsert(dbPayload);
       if (error) {
         console.error("Error updating preferences:", error);
-      }
-    };
-    const loadReminderSettings = async () => {
-      try {
-        const { data, error: fetchError } = await supabase2.from("lesson_reminder_config").select("*").eq("id", "00000000-0000-0000-0000-000000000001").single();
-        if (fetchError) {
-          console.error("Error loading reminder settings:", fetchError);
-          return;
-        }
-        if (data) {
-          setReminderSettings({
-            id: data.id,
-            enabled: data.enabled,
-            reminder_days_before: data.reminder_days_before,
-            reminder_time: data.reminder_time,
-            include_upcoming_lessons: data.include_upcoming_lessons,
-            upcoming_days_ahead: data.upcoming_days_ahead,
-            max_reminder_attempts: data.max_reminder_attempts || 3,
-            reminder_frequency_days: data.reminder_frequency_days || 7
-          });
-        }
-      } catch (err) {
-        console.error("Error loading reminder settings:", err);
       }
     };
     if (loading) {
@@ -831,11 +819,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 type: "number",
                 min: "1",
                 max: "10",
-                value: reminderSettings.max_reminder_attempts,
-                onChange: (e) => setReminderSettings((prev) => ({
-                  ...prev,
-                  max_reminder_attempts: parseInt(e.target.value) || 3
-                })),
+                value: (preferences == null ? void 0 : preferences.maxReminderAttempts) || 3,
+                onChange: (e) => updatePreferences({ maxReminderAttempts: parseInt(e.target.value) || 3 }),
                 className: "mt-1"
               }
             )
@@ -849,11 +834,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 type: "number",
                 min: "1",
                 max: "30",
-                value: reminderSettings.reminder_frequency_days,
-                onChange: (e) => setReminderSettings((prev) => ({
-                  ...prev,
-                  reminder_frequency_days: parseInt(e.target.value) || 7
-                })),
+                value: (preferences == null ? void 0 : preferences.reminderFrequencyDays) || 7,
+                onChange: (e) => updatePreferences({ reminderFrequencyDays: parseInt(e.target.value) || 7 }),
                 className: "mt-1"
               }
             )
@@ -902,18 +884,23 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3 border-t pt-4 mt-4", children: [
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3", children: [
               /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
                 /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left font-medium", children: "Lesson Reminders" }),
                 /* @__PURE__ */ jsxRuntime.jsx(
                   Switch,
                   {
-                    checked: reminderSettings.enabled,
-                    onCheckedChange: (checked) => setReminderSettings((prev) => ({ ...prev, enabled: checked }))
+                    checked: (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0,
+                    onCheckedChange: (checked) => {
+                      updatePreferences({
+                        reminderDaysBefore: checked ? 1 : -1
+                        // -1 means disabled
+                      });
+                    }
                   }
                 )
               ] }),
-              reminderSettings.enabled && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+              (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                 /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-days", className: "text-sm", children: "Days before lesson" }),
                   /* @__PURE__ */ jsxRuntime.jsx(
@@ -923,11 +910,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                       type: "number",
                       min: "0",
                       max: "7",
-                      value: reminderSettings.reminder_days_before,
-                      onChange: (e) => setReminderSettings((prev) => ({
-                        ...prev,
-                        reminder_days_before: parseInt(e.target.value) || 0
-                      })),
+                      value: (preferences == null ? void 0 : preferences.reminderDaysBefore) || 0,
+                      onChange: (e) => updatePreferences({ reminderDaysBefore: parseInt(e.target.value) || 0 }),
                       className: "mt-1"
                     }
                   )
@@ -939,32 +923,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     {
                       id: "reminder-time",
                       type: "time",
-                      value: reminderSettings.reminder_time,
-                      onChange: (e) => setReminderSettings((prev) => ({
-                        ...prev,
-                        reminder_time: e.target.value
-                      })),
+                      value: (preferences == null ? void 0 : preferences.reminderTime) || "09:00",
+                      onChange: (e) => updatePreferences({ reminderTime: e.target.value }),
                       className: "mt-1"
                     }
                   )
                 ] })
               ] }) })
             ] }),
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3 border-t pt-4 mt-4", children: [
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3", children: [
               /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
                 /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left font-medium", children: "Upcoming Lessons" }),
                 /* @__PURE__ */ jsxRuntime.jsx(
                   Switch,
                   {
-                    checked: reminderSettings.include_upcoming_lessons,
-                    onCheckedChange: (checked) => setReminderSettings((prev) => ({
-                      ...prev,
-                      include_upcoming_lessons: checked
-                    }))
+                    checked: (preferences == null ? void 0 : preferences.includeUpcomingLessons) || false,
+                    onCheckedChange: (checked) => updatePreferences({ includeUpcomingLessons: checked })
                   }
                 )
               ] }),
-              reminderSettings.include_upcoming_lessons && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "pl-4 border-l-2 border-green-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+              (preferences == null ? void 0 : preferences.includeUpcomingLessons) && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "pl-4 border-l-2 border-green-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "upcoming-days", className: "text-sm", children: "Look ahead days" }),
                 /* @__PURE__ */ jsxRuntime.jsx(
                   Input,
@@ -973,11 +951,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     type: "number",
                     min: "1",
                     max: "14",
-                    value: reminderSettings.upcoming_days_ahead,
-                    onChange: (e) => setReminderSettings((prev) => ({
-                      ...prev,
-                      upcoming_days_ahead: parseInt(e.target.value) || 3
-                    })),
+                    value: (preferences == null ? void 0 : preferences.upcomingDaysAhead) || 3,
+                    onChange: (e) => updatePreferences({ upcomingDaysAhead: parseInt(e.target.value) || 3 }),
                     className: "mt-1"
                   }
                 )

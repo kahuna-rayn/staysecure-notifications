@@ -33,7 +33,8 @@ interface EmailNotificationsProps {
 
 
 interface EmailPreferences {
-  userId: string;
+  id?: string;
+  userId?: string; // NULL for org-level, user UUID for user-level
   emailEnabled: boolean;
   taskDueDates: boolean;
   systemAlerts: boolean;
@@ -42,22 +43,20 @@ interface EmailPreferences {
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
+  // Reminder settings (consolidated from lesson_reminder_config)
+  reminderDaysBefore: number;
+  reminderTime: string;
+  includeUpcomingLessons: boolean;
+  upcomingDaysAhead: number;
+  maxReminderAttempts: number;
+  reminderFrequencyDays: number;
 }
 
-interface ReminderSettings {
-  id?: string;
-  enabled: boolean;
-  reminder_days_before: number;
-  reminder_time: string;
-  include_upcoming_lessons: boolean;
-  upcoming_days_ahead: number;
-  max_reminder_attempts: number;
-  reminder_frequency_days: number;
-}
+// ReminderSettings interface removed - now part of EmailPreferences
 
 export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   supabase,
-  user,
+  user, // Keep for now for auth context, but not used for preferences
   awsConfig,
   Button,
   Card,
@@ -76,19 +75,9 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   Textarea,
 }) => {
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
-  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
-    enabled: true,
-    reminder_days_before: 1,
-    reminder_time: '09:00:00',
-    include_upcoming_lessons: true,
-    upcoming_days_ahead: 3,
-    max_reminder_attempts: 3,
-    reminder_frequency_days: 7,
-  });
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [savingReminders, setSavingReminders] = useState(false);
-  const [testingReminders, setTestingReminders] = useState(false);
+  // Removed unused state variables - now using consolidated preferences
   const [testEmailType, setTestEmailType] = useState<string>('system_alert');
 
   // Configure email service with AWS config
@@ -100,18 +89,15 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
   // Load user preferences and reminder settings
   useEffect(() => {
-    if (user) {
-      loadPreferences();
-      loadReminderSettings();
-    }
-  }, [user]);
+    loadPreferences(); // Load org-level preferences (no user dependency)
+  }, []);
 
   const loadPreferences = async () => {
     try {
       const { data, error } = await supabase
         .from('email_preferences')
         .select('*')
-        .eq('user_id', user?.id)
+        .is('user_id', null)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -122,7 +108,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       if (data) {
         // Map database columns to component interface
         const mappedData: EmailPreferences = {
-          userId: data.user_id,
+          id: data.id,
+          userId: data.user_id, // Will be null for org-level
           emailEnabled: data.email_enabled,
           taskDueDates: data.task_due_dates,
           systemAlerts: data.system_alerts,
@@ -131,12 +118,19 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           quietHoursEnabled: data.quiet_hours_enabled,
           quietHoursStart: data.quiet_hours_start_time,
           quietHoursEnd: data.quiet_hours_end_time,
+          // Reminder settings (now part of the same table)
+          reminderDaysBefore: data.reminder_days_before,
+          reminderTime: data.reminder_time,
+          includeUpcomingLessons: data.include_upcoming_lessons,
+          upcomingDaysAhead: data.upcoming_days_ahead,
+          maxReminderAttempts: data.max_reminder_attempts,
+          reminderFrequencyDays: data.reminder_frequency_days,
         };
         setPreferences(mappedData);
       } else {
         // Set default preferences in UI (don't save to DB yet)
         const defaultPrefs: EmailPreferences = {
-          userId: user?.id || '',
+          userId: null, // Org-level settings
           emailEnabled: true,
           taskDueDates: false,
           systemAlerts: false,
@@ -145,6 +139,13 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           quietHoursEnabled: false,
           quietHoursStart: '22:00',
           quietHoursEnd: '08:00',
+          // Default reminder settings
+          reminderDaysBefore: 0,
+          reminderTime: '09:00',
+          includeUpcomingLessons: true,
+          upcomingDaysAhead: 3,
+          maxReminderAttempts: 3,
+          reminderFrequencyDays: 7,
         };
         setPreferences(defaultPrefs);
       }
@@ -157,7 +158,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 
   const createPreferences = async (prefs: EmailPreferences) => {
     const dbPayload = {
-      user_id: prefs.userId,
+      user_id: prefs.userId, // NULL for org-level
       email_enabled: prefs.emailEnabled,
       task_due_dates: prefs.taskDueDates,
       system_alerts: prefs.systemAlerts,
@@ -166,6 +167,13 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       quiet_hours_enabled: prefs.quietHoursEnabled,
       quiet_hours_start_time: prefs.quietHoursStart,
       quiet_hours_end_time: prefs.quietHoursEnd,
+      // Reminder settings (consolidated)
+      reminder_days_before: prefs.reminderDaysBefore,
+      reminder_time: prefs.reminderTime,
+      include_upcoming_lessons: prefs.includeUpcomingLessons,
+      upcoming_days_ahead: prefs.upcomingDaysAhead,
+      max_reminder_attempts: prefs.maxReminderAttempts,
+      reminder_frequency_days: prefs.reminderFrequencyDays,
     };
     
     const { error } = await supabase
@@ -181,12 +189,12 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
     const updatedPrefs = { 
       ...preferences, 
       ...updates, 
-      userId: user.id // Always use current user ID
+      userId: null // Always org-level settings
     };
     setPreferences(updatedPrefs);
 
     const dbPayload = {
-      user_id: user.id, // Always use current user ID
+      user_id: null, // Always org-level settings
       email_enabled: updatedPrefs.emailEnabled,
       task_due_dates: updatedPrefs.taskDueDates,
       system_alerts: updatedPrefs.systemAlerts,
@@ -195,6 +203,13 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
       quiet_hours_start_time: updatedPrefs.quietHoursStart,
       quiet_hours_end_time: updatedPrefs.quietHoursEnd,
+      // Reminder settings (consolidated)
+      reminder_days_before: updatedPrefs.reminderDaysBefore,
+      reminder_time: updatedPrefs.reminderTime,
+      include_upcoming_lessons: updatedPrefs.includeUpcomingLessons,
+      upcoming_days_ahead: updatedPrefs.upcomingDaysAhead,
+      max_reminder_attempts: updatedPrefs.maxReminderAttempts,
+      reminder_frequency_days: updatedPrefs.reminderFrequencyDays,
     };
 
     const { error } = await supabase
@@ -206,66 +221,11 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
     }
   };
 
-  const loadReminderSettings = async () => {
-    try {
-      // Fetch the single global configuration row
-      const { data, error: fetchError } = await supabase
-        .from('lesson_reminder_config')
-        .select('*')
-        .eq('id', '00000000-0000-0000-0000-000000000001')
-        .single();
+  // loadReminderSettings removed - now part of loadPreferences
 
-      if (fetchError) {
-        console.error('Error loading reminder settings:', fetchError);
-        return;
-      }
+  // saveReminderSettingsAuto removed - now uses updatePreferences directly
 
-      if (data) {
-        setReminderSettings({
-          id: data.id,
-          enabled: data.enabled,
-          reminder_days_before: data.reminder_days_before,
-          reminder_time: data.reminder_time,
-          include_upcoming_lessons: data.include_upcoming_lessons,
-          upcoming_days_ahead: data.upcoming_days_ahead,
-          max_reminder_attempts: data.max_reminder_attempts || 3,
-          reminder_frequency_days: data.reminder_frequency_days || 7,
-        });
-      }
-    } catch (err: any) {
-      console.error('Error loading reminder settings:', err);
-    }
-  };
-
-  const saveReminderSettings = async () => {
-    try {
-      setSavingReminders(true);
-
-      // Always update the single global configuration row
-      const { error: updateError } = await supabase
-        .from('lesson_reminder_config')
-        .update({
-          enabled: reminderSettings.enabled,
-          reminder_days_before: reminderSettings.reminder_days_before,
-          reminder_time: reminderSettings.reminder_time,
-          include_upcoming_lessons: reminderSettings.include_upcoming_lessons,
-          upcoming_days_ahead: reminderSettings.upcoming_days_ahead,
-          max_reminder_attempts: reminderSettings.max_reminder_attempts,
-          reminder_frequency_days: reminderSettings.reminder_frequency_days,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', '00000000-0000-0000-0000-000000000001');
-
-      if (updateError) throw updateError;
-
-      alert('Reminder settings saved successfully!');
-    } catch (err: any) {
-      console.error('Error saving reminder settings:', err);
-      alert(`Failed to save reminder settings: ${err.message}`);
-    } finally {
-      setSavingReminders(false);
-    }
-  };
+  // saveReminderSettings removed - now uses updatePreferences directly
 
   const testReminders = async () => {
     try {
@@ -419,11 +379,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                   type="number"
                   min="1"
                   max="10"
-                  value={reminderSettings.max_reminder_attempts}
-                  onChange={(e) => setReminderSettings(prev => ({ 
-                    ...prev, 
-                    max_reminder_attempts: parseInt(e.target.value) || 3 
-                  }))}
+                  value={preferences?.maxReminderAttempts || 3}
+                         onChange={(e) => updatePreferences({ maxReminderAttempts: parseInt(e.target.value) || 3 })}
                   className="mt-1"
                 />
               </div>
@@ -434,11 +391,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                   type="number"
                   min="1"
                   max="30"
-                  value={reminderSettings.reminder_frequency_days}
-                  onChange={(e) => setReminderSettings(prev => ({ 
-                    ...prev, 
-                    reminder_frequency_days: parseInt(e.target.value) || 7 
-                  }))}
+                  value={preferences?.reminderFrequencyDays || 7}
+                         onChange={(e) => updatePreferences({ reminderFrequencyDays: parseInt(e.target.value) || 7 })}
                   className="mt-1"
                 />
               </div>
@@ -485,16 +439,20 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                 </div>
 
                 {/* Lesson Reminders - Enhanced */}
-                <div className="space-y-3 border-t pt-4 mt-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-left font-medium">Lesson Reminders</Label>
                     <Switch
-                      checked={reminderSettings.enabled}
-                      onCheckedChange={(checked) => setReminderSettings(prev => ({ ...prev, enabled: checked }))}
+                    checked={preferences?.reminderDaysBefore !== undefined && preferences?.reminderDaysBefore >= 0}
+                    onCheckedChange={(checked) => {
+                      updatePreferences({ 
+                        reminderDaysBefore: checked ? 1 : -1 // -1 means disabled
+                      });
+                    }}
                     />
                   </div>
                   
-                  {reminderSettings.enabled && (
+                  {preferences?.reminderDaysBefore !== undefined && preferences?.reminderDaysBefore >= 0 && (
                     <div className="space-y-4 pl-4 border-l-2 border-blue-200">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -504,11 +462,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                             type="number"
                             min="0"
                             max="7"
-                            value={reminderSettings.reminder_days_before}
-                            onChange={(e) => setReminderSettings(prev => ({ 
-                              ...prev, 
-                              reminder_days_before: parseInt(e.target.value) || 0 
-                            }))}
+                            value={preferences?.reminderDaysBefore || 0}
+                            onChange={(e) => updatePreferences({ reminderDaysBefore: parseInt(e.target.value) || 0 })}
                             className="mt-1"
                           />
                         </div>
@@ -517,11 +472,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                           <Input
                             id="reminder-time"
                             type="time"
-                            value={reminderSettings.reminder_time}
-                            onChange={(e) => setReminderSettings(prev => ({ 
-                              ...prev, 
-                              reminder_time: e.target.value 
-                            }))}
+                            value={preferences?.reminderTime || '09:00'}
+                            onChange={(e) => updatePreferences({ reminderTime: e.target.value })}
                             className="mt-1"
                           />
                         </div>
@@ -531,19 +483,16 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                 </div>
 
                 {/* Upcoming Lessons - Enhanced */}
-                <div className="space-y-3 border-t pt-4 mt-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-left font-medium">Upcoming Lessons</Label>
                     <Switch
-                      checked={reminderSettings.include_upcoming_lessons}
-                      onCheckedChange={(checked) => setReminderSettings(prev => ({ 
-                        ...prev, 
-                        include_upcoming_lessons: checked 
-                      }))}
+                      checked={preferences?.includeUpcomingLessons || false}
+                      onCheckedChange={(checked) => updatePreferences({ includeUpcomingLessons: checked })}
                     />
                   </div>
                   
-                  {reminderSettings.include_upcoming_lessons && (
+                  {preferences?.includeUpcomingLessons && (
                     <div className="pl-4 border-l-2 border-green-200">
                       <div>
                         <Label htmlFor="upcoming-days" className="text-sm">Look ahead days</Label>
@@ -552,11 +501,8 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                           type="number"
                           min="1"
                           max="14"
-                          value={reminderSettings.upcoming_days_ahead}
-                          onChange={(e) => setReminderSettings(prev => ({ 
-                            ...prev, 
-                            upcoming_days_ahead: parseInt(e.target.value) || 3 
-                          }))}
+                          value={preferences?.upcomingDaysAhead || 3}
+                            onChange={(e) => updatePreferences({ upcomingDaysAhead: parseInt(e.target.value) || 3 })}
                           className="mt-1"
                         />
                       </div>
