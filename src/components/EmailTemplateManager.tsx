@@ -377,21 +377,24 @@ export default function EmailTemplateManager({
           <h2 className="text-2xl font-bold text-learning-primary">Email Template Management</h2>
           <p className="text-muted-foreground">Create and manage email templates</p>
         </div>
-        {isSuperAdmin ? (
-          <div className="flex items-center space-x-2">
-            <Button 
-              className="bg-learning-primary hover:bg-learning-primary/90"
-              onClick={handleCreate}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Template
-            </Button>
-          </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            Template creation requires Super Admin access
-          </div>
-        )}
+        {(() => {
+          console.log('Rendering header - isSuperAdmin:', isSuperAdmin, 'type:', typeof isSuperAdmin);
+          return isSuperAdmin ? (
+            <div className="flex items-center space-x-2">
+              <Button 
+                className="bg-learning-primary hover:bg-learning-primary/90"
+                onClick={handleCreate}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </Button>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Template creation requires Super Admin access
+            </div>
+          );
+        })()}
       </div>
 
       {/* Filters */}
