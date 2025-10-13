@@ -699,9 +699,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }, []);
     const loadPreferences = async () => {
       try {
+        console.log("Loading org-level preferences...");
         const { data, error } = await supabase2.from("email_preferences").select("*").is("user_id", null).single();
+        console.log("Load preferences result:", { data, error });
         if (error && error.code !== "PGRST116") {
           console.error("Error loading preferences:", error);
+          await createDefaultOrgPreferences();
           return;
         }
         if (data) {
@@ -727,31 +730,62 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           };
           setPreferences(mappedData);
         } else {
-          const defaultPrefs = {
-            userId: null,
-            // Org-level settings
-            emailEnabled: true,
-            taskDueDates: false,
-            systemAlerts: false,
-            achievements: true,
-            courseCompletions: true,
-            quietHoursEnabled: false,
-            quietHoursStart: "22:00",
-            quietHoursEnd: "08:00",
-            // Default reminder settings
-            reminderDaysBefore: 0,
-            reminderTime: "09:00",
-            includeUpcomingLessons: true,
-            upcomingDaysAhead: 3,
-            maxReminderAttempts: 3,
-            reminderFrequencyDays: 7
-          };
-          setPreferences(defaultPrefs);
+          await createDefaultOrgPreferences();
         }
       } catch (error) {
         console.error("Error loading preferences:", error);
       } finally {
         setLoading(false);
+      }
+    };
+    const createDefaultOrgPreferences = async () => {
+      const { data: { user: currentUser } } = await supabase2.auth.getUser();
+      const defaultPrefs = {
+        userId: null,
+        // Org-level settings
+        emailEnabled: true,
+        taskDueDates: true,
+        systemAlerts: false,
+        achievements: true,
+        courseCompletions: true,
+        quietHoursEnabled: false,
+        quietHoursStart: "22:00",
+        quietHoursEnd: "08:00",
+        // Default reminder settings
+        reminderDaysBefore: 0,
+        reminderTime: "09:00",
+        includeUpcomingLessons: true,
+        upcomingDaysAhead: 3,
+        maxReminderAttempts: 3,
+        reminderFrequencyDays: 7
+      };
+      const dbPayload = {
+        user_id: null,
+        // Always org-level
+        email_enabled: defaultPrefs.emailEnabled,
+        task_due_dates: defaultPrefs.taskDueDates,
+        system_alerts: defaultPrefs.systemAlerts,
+        achievements: defaultPrefs.achievements,
+        course_completions: defaultPrefs.courseCompletions,
+        quiet_hours_enabled: defaultPrefs.quietHoursEnabled,
+        quiet_hours_start_time: defaultPrefs.quietHoursStart,
+        quiet_hours_end_time: defaultPrefs.quietHoursEnd,
+        // Reminder settings (consolidated)
+        reminder_days_before: defaultPrefs.reminderDaysBefore,
+        reminder_time: defaultPrefs.reminderTime,
+        include_upcoming_lessons: defaultPrefs.includeUpcomingLessons,
+        upcoming_days_ahead: defaultPrefs.upcomingDaysAhead,
+        max_reminder_attempts: defaultPrefs.maxReminderAttempts,
+        reminder_frequency_days: defaultPrefs.reminderFrequencyDays,
+        // Audit fields
+        created_by: (currentUser == null ? void 0 : currentUser.id) || null,
+        updated_by: (currentUser == null ? void 0 : currentUser.id) || null
+      };
+      const { error } = await supabase2.from("email_preferences").insert(dbPayload);
+      if (error) {
+        console.error("Error creating default org preferences:", error);
+      } else {
+        setPreferences(defaultPrefs);
       }
     };
     const updatePreferences = async (updates) => {
