@@ -814,6 +814,50 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         console.error("Error loading reminder settings:", err);
       }
     };
+    const saveReminderSettings = async () => {
+      try {
+        setSavingReminders(true);
+        const { error: updateError } = await supabase2.from("lesson_reminder_config").update({
+          enabled: reminderSettings.enabled,
+          reminder_days_before: reminderSettings.reminder_days_before,
+          reminder_time: reminderSettings.reminder_time,
+          include_upcoming_lessons: reminderSettings.include_upcoming_lessons,
+          upcoming_days_ahead: reminderSettings.upcoming_days_ahead,
+          max_reminder_attempts: reminderSettings.max_reminder_attempts,
+          reminder_frequency_days: reminderSettings.reminder_frequency_days,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }).eq("id", "00000000-0000-0000-0000-000000000001");
+        if (updateError) throw updateError;
+        alert("Reminder settings saved successfully!");
+      } catch (err) {
+        console.error("Error saving reminder settings:", err);
+        alert(`Failed to save reminder settings: ${err.message}`);
+      } finally {
+        setSavingReminders(false);
+      }
+    };
+    const testReminders = async () => {
+      try {
+        setTestingReminders(true);
+        const { data, error } = await supabase2.functions.invoke("send-lesson-reminders", {
+          body: {
+            test: true,
+            email: user == null ? void 0 : user.email
+          }
+        });
+        if (error) throw error;
+        if (data && data.success) {
+          alert(`Test reminders sent successfully! Check your email at ${user == null ? void 0 : user.email}`);
+        } else {
+          alert(`Test failed: ${(data == null ? void 0 : data.message) || "Unknown error"}`);
+        }
+      } catch (err) {
+        console.error("Error testing reminders:", err);
+        alert(`Failed to send test reminders: ${err.message}`);
+      } finally {
+        setTestingReminders(false);
+      }
+    };
     const sendTestEmail = async () => {
       if (!user || !user.email) {
         return;
@@ -952,28 +996,149 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Lesson Reminders" }),
-              /* @__PURE__ */ jsxRuntime.jsx(
-                Switch,
-                {
-                  checked: reminderSettings.enabled,
-                  onCheckedChange: (checked) => setReminderSettings((prev) => ({ ...prev, enabled: checked }))
-                }
-              )
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3 border-t pt-4 mt-4", children: [
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left font-medium", children: "Lesson Reminders" }),
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Switch,
+                  {
+                    checked: reminderSettings.enabled,
+                    onCheckedChange: (checked) => setReminderSettings((prev) => ({ ...prev, enabled: checked }))
+                  }
+                )
+              ] }),
+              reminderSettings.enabled && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-days", className: "text-sm", children: "Days before lesson" }),
+                  /* @__PURE__ */ jsxRuntime.jsx(
+                    Input,
+                    {
+                      id: "reminder-days",
+                      type: "number",
+                      min: "0",
+                      max: "7",
+                      value: reminderSettings.reminder_days_before,
+                      onChange: (e) => setReminderSettings((prev) => ({
+                        ...prev,
+                        reminder_days_before: parseInt(e.target.value) || 0
+                      })),
+                      className: "mt-1"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-time", className: "text-sm", children: "Send at time" }),
+                  /* @__PURE__ */ jsxRuntime.jsx(
+                    Input,
+                    {
+                      id: "reminder-time",
+                      type: "time",
+                      value: reminderSettings.reminder_time,
+                      onChange: (e) => setReminderSettings((prev) => ({
+                        ...prev,
+                        reminder_time: e.target.value
+                      })),
+                      className: "mt-1"
+                    }
+                  )
+                ] })
+              ] }) })
             ] }),
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Upcoming Lessons" }),
-              /* @__PURE__ */ jsxRuntime.jsx(
-                Switch,
-                {
-                  checked: reminderSettings.include_upcoming_lessons,
-                  onCheckedChange: (checked) => setReminderSettings((prev) => ({
-                    ...prev,
-                    include_upcoming_lessons: checked
-                  }))
-                }
-              )
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3 border-t pt-4 mt-4", children: [
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left font-medium", children: "Upcoming Lessons" }),
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Switch,
+                  {
+                    checked: reminderSettings.include_upcoming_lessons,
+                    onCheckedChange: (checked) => setReminderSettings((prev) => ({
+                      ...prev,
+                      include_upcoming_lessons: checked
+                    }))
+                  }
+                )
+              ] }),
+              reminderSettings.include_upcoming_lessons && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "pl-4 border-l-2 border-green-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "upcoming-days", className: "text-sm", children: "Look ahead days" }),
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Input,
+                  {
+                    id: "upcoming-days",
+                    type: "number",
+                    min: "1",
+                    max: "14",
+                    value: reminderSettings.upcoming_days_ahead,
+                    onChange: (e) => setReminderSettings((prev) => ({
+                      ...prev,
+                      upcoming_days_ahead: parseInt(e.target.value) || 3
+                    })),
+                    className: "mt-1"
+                  }
+                )
+              ] }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4 border-t pt-4 mt-4", children: [
+              /* @__PURE__ */ jsxRuntime.jsx("h4", { className: "font-medium text-gray-900", children: "Reminder Limits" }),
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "max-attempts", className: "text-sm", children: "Max Reminder Attempts" }),
+                  /* @__PURE__ */ jsxRuntime.jsx(
+                    Input,
+                    {
+                      id: "max-attempts",
+                      type: "number",
+                      min: "1",
+                      max: "10",
+                      value: reminderSettings.max_reminder_attempts,
+                      onChange: (e) => setReminderSettings((prev) => ({
+                        ...prev,
+                        max_reminder_attempts: parseInt(e.target.value) || 3
+                      })),
+                      className: "mt-1"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-frequency", className: "text-sm", children: "Reminder Frequency (Days)" }),
+                  /* @__PURE__ */ jsxRuntime.jsx(
+                    Input,
+                    {
+                      id: "reminder-frequency",
+                      type: "number",
+                      min: "1",
+                      max: "30",
+                      value: reminderSettings.reminder_frequency_days,
+                      onChange: (e) => setReminderSettings((prev) => ({
+                        ...prev,
+                        reminder_frequency_days: parseInt(e.target.value) || 7
+                      })),
+                      className: "mt-1"
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex gap-2 pt-2", children: [
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Button,
+                  {
+                    onClick: saveReminderSettings,
+                    disabled: savingReminders,
+                    size: "sm",
+                    className: "bg-blue-600 hover:bg-blue-700",
+                    children: savingReminders ? "Saving..." : "Save Settings"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntime.jsx(
+                  Button,
+                  {
+                    onClick: testReminders,
+                    disabled: testingReminders,
+                    variant: "outline",
+                    size: "sm",
+                    children: testingReminders ? "Testing..." : "Send Test"
+                  }
+                )
+              ] })
             ] })
           ] })
         ] }),

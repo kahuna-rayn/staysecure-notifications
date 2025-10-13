@@ -447,25 +447,139 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                   />
                 </div>
 
-                {/* Lesson Reminders - Simple Toggle */}
-                <div className="flex items-center justify-between">
-                  <Label className="text-left">Lesson Reminders</Label>
-                  <Switch
-                    checked={reminderSettings.enabled}
-                    onCheckedChange={(checked) => setReminderSettings(prev => ({ ...prev, enabled: checked }))}
-                  />
+                {/* Lesson Reminders - Enhanced */}
+                <div className="space-y-3 border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-left font-medium">Lesson Reminders</Label>
+                    <Switch
+                      checked={reminderSettings.enabled}
+                      onCheckedChange={(checked) => setReminderSettings(prev => ({ ...prev, enabled: checked }))}
+                    />
+                  </div>
+                  
+                  {reminderSettings.enabled && (
+                    <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="reminder-days" className="text-sm">Days before lesson</Label>
+                          <Input
+                            id="reminder-days"
+                            type="number"
+                            min="0"
+                            max="7"
+                            value={reminderSettings.reminder_days_before}
+                            onChange={(e) => setReminderSettings(prev => ({ 
+                              ...prev, 
+                              reminder_days_before: parseInt(e.target.value) || 0 
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="reminder-time" className="text-sm">Send at time</Label>
+                          <Input
+                            id="reminder-time"
+                            type="time"
+                            value={reminderSettings.reminder_time}
+                            onChange={(e) => setReminderSettings(prev => ({ 
+                              ...prev, 
+                              reminder_time: e.target.value 
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Upcoming Lessons - Simple Toggle */}
-                <div className="flex items-center justify-between">
-                  <Label className="text-left">Upcoming Lessons</Label>
-                  <Switch
-                    checked={reminderSettings.include_upcoming_lessons}
-                    onCheckedChange={(checked) => setReminderSettings(prev => ({ 
-                      ...prev, 
-                      include_upcoming_lessons: checked 
-                    }))}
-                  />
+                {/* Upcoming Lessons - Enhanced */}
+                <div className="space-y-3 border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-left font-medium">Upcoming Lessons</Label>
+                    <Switch
+                      checked={reminderSettings.include_upcoming_lessons}
+                      onCheckedChange={(checked) => setReminderSettings(prev => ({ 
+                        ...prev, 
+                        include_upcoming_lessons: checked 
+                      }))}
+                    />
+                  </div>
+                  
+                  {reminderSettings.include_upcoming_lessons && (
+                    <div className="pl-4 border-l-2 border-green-200">
+                      <div>
+                        <Label htmlFor="upcoming-days" className="text-sm">Look ahead days</Label>
+                        <Input
+                          id="upcoming-days"
+                          type="number"
+                          min="1"
+                          max="14"
+                          value={reminderSettings.upcoming_days_ahead}
+                          onChange={(e) => setReminderSettings(prev => ({ 
+                            ...prev, 
+                            upcoming_days_ahead: parseInt(e.target.value) || 3 
+                          }))}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reminder Limits */}
+                <div className="space-y-4 border-t pt-4 mt-4">
+                  <h4 className="font-medium text-gray-900">Reminder Limits</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="max-attempts" className="text-sm">Max Reminder Attempts</Label>
+                      <Input
+                        id="max-attempts"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={reminderSettings.max_reminder_attempts}
+                        onChange={(e) => setReminderSettings(prev => ({ 
+                          ...prev, 
+                          max_reminder_attempts: parseInt(e.target.value) || 3 
+                        }))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="reminder-frequency" className="text-sm">Reminder Frequency (Days)</Label>
+                      <Input
+                        id="reminder-frequency"
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={reminderSettings.reminder_frequency_days}
+                        onChange={(e) => setReminderSettings(prev => ({ 
+                          ...prev, 
+                          reminder_frequency_days: parseInt(e.target.value) || 7 
+                        }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={saveReminderSettings}
+                      disabled={savingReminders}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {savingReminders ? 'Saving...' : 'Save Settings'}
+                    </Button>
+                    <Button
+                      onClick={testReminders}
+                      disabled={testingReminders}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {testingReminders ? 'Testing...' : 'Send Test'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
