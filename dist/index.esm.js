@@ -1255,20 +1255,17 @@ function EmailTemplateManager({
         /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
         /* @__PURE__ */ jsx("p", { className: "text-muted-foreground", children: "Create and manage email templates" })
       ] }),
-      (() => {
-        console.log("Rendering header - isSuperAdmin:", isSuperAdmin, "type:", typeof isSuperAdmin);
-        return isSuperAdmin ? /* @__PURE__ */ jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxs(
-          Button,
-          {
-            className: "bg-learning-primary hover:bg-learning-primary/90",
-            onClick: handleCreate,
-            children: [
-              /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-2" }),
-              "Create Template"
-            ]
-          }
-        ) }) : /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Template creation requires Super Admin access" });
-      })()
+      /* @__PURE__ */ jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxs(
+        Button,
+        {
+          className: "bg-learning-primary hover:bg-learning-primary/90",
+          onClick: handleCreate,
+          children: [
+            /* @__PURE__ */ jsx(Plus, { className: "h-4 w-4 mr-2" }),
+            "Create Template"
+          ]
+        }
+      ) })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row gap-4", children: [
       /* @__PURE__ */ jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "relative", children: [
