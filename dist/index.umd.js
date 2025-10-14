@@ -1750,11 +1750,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "font-medium", children: notification.title }),
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground line-clamp-2", children: notification.message })
           ] }) }),
-          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx(Badge, { className: getTypeColor(notification.type), children: notification.type.replace("_", " ") }) }),
+          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx("span", { className: `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(notification.type)}`, children: notification.type.replace("_", " ") }) }),
           /* @__PURE__ */ jsxRuntime.jsxs("td", { className: "p-4", children: [
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
               getStatusIcon(notification.status),
-              /* @__PURE__ */ jsxRuntime.jsx(Badge, { className: getStatusColor(notification.status), children: notification.status })
+              /* @__PURE__ */ jsxRuntime.jsx("span", { className: `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`, children: notification.status })
             ] }),
             notification.status === "failed" && notification.error_message && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-red-600 mt-1", children: notification.error_message })
           ] }),

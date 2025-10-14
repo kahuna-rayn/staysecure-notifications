@@ -1750,11 +1750,11 @@ function RecentEmailNotifications({
           /* @__PURE__ */ jsx("div", { className: "font-medium", children: notification.title }),
           /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground line-clamp-2", children: notification.message })
         ] }) }),
-        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsx(Badge, { className: getTypeColor(notification.type), children: notification.type.replace("_", " ") }) }),
+        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsx("span", { className: `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(notification.type)}`, children: notification.type.replace("_", " ") }) }),
         /* @__PURE__ */ jsxs("td", { className: "p-4", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
             getStatusIcon(notification.status),
-            /* @__PURE__ */ jsx(Badge, { className: getStatusColor(notification.status), children: notification.status })
+            /* @__PURE__ */ jsx("span", { className: `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`, children: notification.status })
           ] }),
           notification.status === "failed" && notification.error_message && /* @__PURE__ */ jsx("div", { className: "text-xs text-red-600 mt-1", children: notification.error_message })
         ] }),

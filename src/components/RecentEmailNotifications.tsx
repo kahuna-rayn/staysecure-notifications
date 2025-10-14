@@ -331,16 +331,16 @@ export default function RecentEmailNotifications({
                         </div>
                       </td>
                       <td className="p-4">
-                        <Badge className={getTypeColor(notification.type)}>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(notification.type)}`}>
                           {notification.type.replace('_', ' ')}
-                        </Badge>
+                        </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(notification.status)}
-                          <Badge className={getStatusColor(notification.status)}>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`}>
                             {notification.status}
-                          </Badge>
+                          </span>
                         </div>
                         {notification.status === 'failed' && notification.error_message && (
                           <div className="text-xs text-red-600 mt-1">
