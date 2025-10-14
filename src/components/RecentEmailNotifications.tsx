@@ -79,12 +79,12 @@ export default function RecentEmailNotifications({
   const loadNotifications = async () => {
     try {
       setLoading(true);
+      // Get current user for email display
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
       const { data, error } = await supabaseClient
         .from('notification_history')
-        .select(`
-          *,
-          user:user_id(email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100); // Show last 100 notifications
 
@@ -97,7 +97,7 @@ export default function RecentEmailNotifications({
         message: `Notification of type ${notification.trigger_event}`,
         type: notification.trigger_event,
         status: notification.status,
-        email: notification.user?.email || 'Unknown User',
+        email: user?.email || 'Unknown User',
         sent_at: notification.sent_at || notification.created_at,
         error_message: notification.error_message
       }));

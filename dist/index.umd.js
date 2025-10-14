@@ -1631,24 +1631,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const loadNotifications = async () => {
       try {
         setLoading(true);
-        const { data, error: error2 } = await supabaseClient.from("notification_history").select(`
-          *,
-          user:user_id(email)
-        `).order("created_at", { ascending: false }).limit(100);
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data, error: error2 } = await supabaseClient.from("notification_history").select("*").order("created_at", { ascending: false }).limit(100);
         if (error2) throw error2;
-        const mappedData = (data || []).map((notification) => {
-          var _a;
-          return {
-            id: notification.id,
-            title: notification.trigger_event.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-            message: `Notification of type ${notification.trigger_event}`,
-            type: notification.trigger_event,
-            status: notification.status,
-            email: ((_a = notification.user) == null ? void 0 : _a.email) || "Unknown User",
-            sent_at: notification.sent_at || notification.created_at,
-            error_message: notification.error_message
-          };
-        });
+        const mappedData = (data || []).map((notification) => ({
+          id: notification.id,
+          title: notification.trigger_event.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          message: `Notification of type ${notification.trigger_event}`,
+          type: notification.trigger_event,
+          status: notification.status,
+          email: (user == null ? void 0 : user.email) || "Unknown User",
+          sent_at: notification.sent_at || notification.created_at,
+          error_message: notification.error_message
+        }));
         setNotifications(mappedData);
       } catch (err) {
         setError(err.message);
