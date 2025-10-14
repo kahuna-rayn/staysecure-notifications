@@ -139,14 +139,23 @@ export default function RecentEmailNotifications({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
   };
 
   const filteredNotifications = notifications.filter(notification => {
@@ -343,7 +352,7 @@ export default function RecentEmailNotifications({
                           </div>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-left">
                         <span 
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
                           style={getTypeStyle(notification.type)}
@@ -351,7 +360,7 @@ export default function RecentEmailNotifications({
                           {notification.type.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-left">
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(notification.status)}
                           <span 
@@ -367,21 +376,20 @@ export default function RecentEmailNotifications({
                           </div>
                         )}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-left">
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">{notification.email}</span>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-left">
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div className="text-sm">
-                            <div>{formatDate(notification.created_at)}</div>
-                            {notification.sent_at && notification.sent_at !== notification.created_at && (
-                              <div className="text-xs text-muted-foreground">
-                                Sent: {formatDate(notification.sent_at)}
-                              </div>
+                            {notification.sent_at ? (
+                              <div>{formatDate(notification.sent_at)}</div>
+                            ) : (
+                              <div>{formatDate(notification.created_at)}</div>
                             )}
                           </div>
                         </div>

@@ -1692,13 +1692,20 @@ function RecentEmailNotifications({
     }
   };
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch (error2) {
+      return "Invalid Date";
+    }
   };
   const filteredNotifications = notifications.filter((notification) => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) || notification.email.toLowerCase().includes(searchTerm.toLowerCase()) || notification.type.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1814,7 +1821,7 @@ function RecentEmailNotifications({
           /* @__PURE__ */ jsx("div", { className: "font-medium", children: notification.title }),
           /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground line-clamp-2", children: notification.message })
         ] }) }),
-        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsx(
           "span",
           {
             className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border",
@@ -1822,7 +1829,7 @@ function RecentEmailNotifications({
             children: notification.type.replace("_", " ")
           }
         ) }),
-        /* @__PURE__ */ jsxs("td", { className: "p-4", children: [
+        /* @__PURE__ */ jsxs("td", { className: "p-4 text-left", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
             getStatusIcon(notification.status),
             /* @__PURE__ */ jsx(
@@ -1836,19 +1843,13 @@ function RecentEmailNotifications({
           ] }),
           notification.status === "failed" && notification.error_message && /* @__PURE__ */ jsx("div", { className: "text-xs text-red-600 mt-1", children: notification.error_message })
         ] }),
-        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsx(User, { className: "h-4 w-4 text-muted-foreground" }),
           /* @__PURE__ */ jsx("span", { className: "text-sm", children: notification.email })
         ] }) }),
-        /* @__PURE__ */ jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsx(Calendar, { className: "h-4 w-4 text-muted-foreground" }),
-          /* @__PURE__ */ jsxs("div", { className: "text-sm", children: [
-            /* @__PURE__ */ jsx("div", { children: formatDate(notification.created_at) }),
-            notification.sent_at && notification.sent_at !== notification.created_at && /* @__PURE__ */ jsxs("div", { className: "text-xs text-muted-foreground", children: [
-              "Sent: ",
-              formatDate(notification.sent_at)
-            ] })
-          ] })
+          /* @__PURE__ */ jsx("div", { className: "text-sm", children: notification.sent_at ? /* @__PURE__ */ jsx("div", { children: formatDate(notification.sent_at) }) : /* @__PURE__ */ jsx("div", { children: formatDate(notification.created_at) }) })
         ] }) })
       ] }, notification.id)) })
     ] }) }) }) })

@@ -1692,13 +1692,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     };
     const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
+      if (!dateString) return "N/A";
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "Invalid Date";
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      } catch (error2) {
+        return "Invalid Date";
+      }
     };
     const filteredNotifications = notifications.filter((notification) => {
       const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) || notification.email.toLowerCase().includes(searchTerm.toLowerCase()) || notification.type.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1814,7 +1821,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "font-medium", children: notification.title }),
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground line-clamp-2", children: notification.message })
           ] }) }),
-          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx(
+          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsxRuntime.jsx(
             "span",
             {
               className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border",
@@ -1822,7 +1829,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               children: notification.type.replace("_", " ")
             }
           ) }),
-          /* @__PURE__ */ jsxRuntime.jsxs("td", { className: "p-4", children: [
+          /* @__PURE__ */ jsxRuntime.jsxs("td", { className: "p-4 text-left", children: [
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
               getStatusIcon(notification.status),
               /* @__PURE__ */ jsxRuntime.jsx(
@@ -1836,19 +1843,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             ] }),
             notification.status === "failed" && notification.error_message && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-red-600 mt-1", children: notification.error_message })
           ] }),
-          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxRuntime.jsx(User, { className: "h-4 w-4 text-muted-foreground" }),
             /* @__PURE__ */ jsxRuntime.jsx("span", { className: "text-sm", children: notification.email })
           ] }) }),
-          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxRuntime.jsx(Calendar, { className: "h-4 w-4 text-muted-foreground" }),
-            /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-sm", children: [
-              /* @__PURE__ */ jsxRuntime.jsx("div", { children: formatDate(notification.created_at) }),
-              notification.sent_at && notification.sent_at !== notification.created_at && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-xs text-muted-foreground", children: [
-                "Sent: ",
-                formatDate(notification.sent_at)
-              ] })
-            ] })
+            /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm", children: notification.sent_at ? /* @__PURE__ */ jsxRuntime.jsx("div", { children: formatDate(notification.sent_at) }) : /* @__PURE__ */ jsxRuntime.jsx("div", { children: formatDate(notification.created_at) }) })
           ] }) })
         ] }, notification.id)) })
       ] }) }) }) })
