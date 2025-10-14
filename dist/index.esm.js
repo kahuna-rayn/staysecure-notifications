@@ -230,7 +230,7 @@ const Filter = createLucideIcon("Filter", [
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const Mail$1 = createLucideIcon("Mail", [
+const Mail = createLucideIcon("Mail", [
   ["rect", { width: "20", height: "16", x: "2", y: "4", rx: "2", key: "18n3k1" }],
   ["path", { d: "m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7", key: "1ocrg3" }]
 ]);
@@ -456,7 +456,7 @@ const _EmailService = class _EmailService {
       };
     }
   }
-  async sendEmail(emailData, supabaseClient) {
+  async sendEmail(emailData, supabaseClient, notificationId) {
     try {
       if (supabaseClient) {
         const { data, error } = await supabaseClient.functions.invoke("send-email", {
@@ -468,25 +468,34 @@ const _EmailService = class _EmailService {
           }
         });
         if (error) {
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, error.message || "Failed to send email");
+          }
           return {
             success: false,
             error: error.message || "Failed to send email"
           };
         }
         if (data && data.success) {
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, "sent", data.messageId);
+          }
           return {
             success: true,
             messageId: data.messageId
           };
         } else {
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, (data == null ? void 0 : data.error) || "Failed to send email");
+          }
           return {
             success: false,
             error: (data == null ? void 0 : data.error) || "Failed to send email"
           };
         }
       } else {
-        const supabaseUrl = "https://ufvingocbzegpgjknzhm.supabase.co";
-        const supabaseKey = void 0;
+        const supabaseUrl = typeof window !== "undefined" && window.VITE_SUPABASE_URL || "https://ufvingocbzegpgjknzhm.supabase.co";
+        const supabaseKey = typeof window !== "undefined" && window.VITE_SUPABASE_ANON_KEY;
         if (!supabaseKey) {
           return {
             success: false,
@@ -507,11 +516,17 @@ const _EmailService = class _EmailService {
         });
         const result = await response.json();
         if (response.ok && result.success) {
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, "sent", result.messageId);
+          }
           return {
             success: true,
             messageId: result.messageId
           };
         } else {
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, result.error || "Failed to send email");
+          }
           return {
             success: false,
             error: result.error || "Failed to send email"
@@ -520,6 +535,9 @@ const _EmailService = class _EmailService {
       }
     } catch (error) {
       console.error("Error sending email:", error);
+      if (notificationId && supabaseClient) {
+        await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, error.message || "Failed to send email");
+      }
       return {
         success: false,
         error: error.message || "Failed to send email"
@@ -658,7 +676,7 @@ const _EmailService = class _EmailService {
     }, supabaseClient);
   }
   // Send email using provided template data directly (for testing)
-  async sendEmailWithTemplate(subjectTemplate, htmlBodyTemplate, textBodyTemplate, to, variables, supabaseClient) {
+  async sendEmailWithTemplate(subjectTemplate, htmlBodyTemplate, textBodyTemplate, to, variables, supabaseClient, notificationId) {
     try {
       const subject = this.substituteVariables(subjectTemplate, variables);
       const htmlBody = this.substituteVariables(htmlBodyTemplate, variables);
@@ -668,13 +686,36 @@ const _EmailService = class _EmailService {
         subject,
         htmlBody,
         textBody
-      }, supabaseClient);
+      }, supabaseClient, notificationId);
     } catch (error) {
       console.error("Error sending email with template:", error);
       return {
         success: false,
         error: error.message || "Failed to send email with template"
       };
+    }
+  }
+  // Update notification status in database
+  async updateNotificationStatus(supabaseClient, notificationId, status, messageId, errorMessage) {
+    try {
+      const updateData = {
+        status,
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      if (messageId) {
+        updateData.message_id = messageId;
+      }
+      if (errorMessage) {
+        updateData.error_message = errorMessage;
+      }
+      const { error } = await supabaseClient.from("notification_history").update(updateData).eq("id", notificationId);
+      if (error) {
+        console.error("Failed to update notification status:", error);
+      } else {
+        console.log(`Notification ${notificationId} status updated to ${status}`);
+      }
+    } catch (error) {
+      console.error("Error updating notification status:", error);
     }
   }
 };
@@ -795,7 +836,7 @@ const EmailNotifications = ({
   }
   return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-      /* @__PURE__ */ jsx(Mail$1, { className: "h-6 w-6 text-learning-primary" }),
+      /* @__PURE__ */ jsx(Mail, { className: "h-6 w-6 text-learning-primary" }),
       /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Preferences" })
     ] }),
     /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
@@ -1104,15 +1145,28 @@ function EmailTemplateManager({
         return;
       }
       const sampleVariables = generateSampleVariables(template.type);
-      const { EmailService: EmailService2 } = await Promise.resolve().then(() => emailService$1);
-      const service = new EmailService2();
+      const { data: notificationData, error: notificationError } = await supabaseClient.from("notification_history").insert({
+        type: template.type,
+        recipient_email: user.email,
+        subject: template.subject_template,
+        status: "pending",
+        created_at: (/* @__PURE__ */ new Date()).toISOString(),
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      }).select("id").single();
+      if (notificationError) {
+        console.error("Failed to create notification record:", notificationError);
+      }
+      const { emailService: emailService2 } = await Promise.resolve().then(() => emailService$1);
+      const service = emailService2;
       const result = await service.sendEmailWithTemplate(
         template.subject_template,
         template.html_body_template,
         template.text_body_template || "",
         user.email,
         sampleVariables,
-        supabaseClient
+        supabaseClient,
+        notificationData == null ? void 0 : notificationData.id
+        // Pass notification ID for status tracking
       );
       if (result.success) {
         alert(`Test email sent successfully to ${user.email}`);
@@ -1687,7 +1741,7 @@ function RecentEmailNotifications({
         ] })
       ] }) }) }),
       /* @__PURE__ */ jsx(Card, { className: "flex-1", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsx(Mail$1, { className: "h-5 w-5 text-blue-600" }),
+        /* @__PURE__ */ jsx(Mail, { className: "h-5 w-5 text-blue-600" }),
         /* @__PURE__ */ jsxs("div", { children: [
           /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-blue-600", children: notifications.length }),
           /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Total" })
@@ -1734,7 +1788,7 @@ function RecentEmailNotifications({
       ] })
     ] }),
     filteredNotifications.length === 0 ? /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(CardContent, { className: "flex flex-col items-center justify-center py-12", children: [
-      /* @__PURE__ */ jsx(Mail$1, { className: "h-12 w-12 text-muted-foreground mb-4" }),
+      /* @__PURE__ */ jsx(Mail, { className: "h-12 w-12 text-muted-foreground mb-4" }),
       /* @__PURE__ */ jsx("h3", { className: "text-lg font-semibold mb-2", children: "No notifications found" }),
       /* @__PURE__ */ jsx("p", { className: "text-muted-foreground text-center", children: searchTerm || statusFilter !== "all" || typeFilter !== "all" ? "No notifications match your filters." : "No email notifications have been sent yet." })
     ] }) }) : /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(CardContent, { className: "p-0", children: /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full", children: [
@@ -3871,7 +3925,7 @@ const NotificationSettings = ({
         /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
-              /* @__PURE__ */ jsx(Mail$1, { className: "h-4 w-4 text-gray-500" }),
+              /* @__PURE__ */ jsx(Mail, { className: "h-4 w-4 text-gray-500" }),
               /* @__PURE__ */ jsx("span", { className: "text-sm", children: "Email Notifications" })
             ] }),
             /* @__PURE__ */ jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [

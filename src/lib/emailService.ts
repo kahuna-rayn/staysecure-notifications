@@ -147,7 +147,7 @@ export class EmailService {
     }
   }
 
-  async sendEmail(emailData: EmailData, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendEmail(emailData: EmailData, supabaseClient?: any, notificationId?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
     // NEW METHOD: Use Supabase Edge Function instead of direct Lambda call
     try {
       // Use provided supabase client or fallback to direct fetch
@@ -161,6 +161,10 @@ export class EmailService {
         });
 
         if (error) {
+          // Update notification status to 'failed' if notificationId provided
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, error.message || 'Failed to send email');
+          }
           return {
             success: false,
             error: error.message || 'Failed to send email',
@@ -168,11 +172,19 @@ export class EmailService {
         }
 
         if (data && data.success) {
+          // Update notification status to 'sent' if notificationId provided
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, 'sent', data.messageId);
+          }
           return {
             success: true,
             messageId: data.messageId,
           };
         } else {
+          // Update notification status to 'failed' if notificationId provided
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, data?.error || 'Failed to send email');
+          }
           return {
             success: false,
             error: data?.error || 'Failed to send email',
@@ -180,8 +192,8 @@ export class EmailService {
         }
       } else {
         // Fallback to direct fetch if no supabase client provided
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ufvingocbzegpgjknzhm.supabase.co';
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const supabaseUrl = (typeof window !== 'undefined' && (window as any).VITE_SUPABASE_URL) || 'https://ufvingocbzegpgjknzhm.supabase.co';
+        const supabaseKey = (typeof window !== 'undefined' && (window as any).VITE_SUPABASE_ANON_KEY);
         
         if (!supabaseKey) {
           return {
@@ -206,11 +218,19 @@ export class EmailService {
         const result = await response.json();
 
         if (response.ok && result.success) {
+          // Update notification status to 'sent' if notificationId provided
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, 'sent', result.messageId);
+          }
           return {
             success: true,
             messageId: result.messageId,
           };
         } else {
+          // Update notification status to 'failed' if notificationId provided
+          if (notificationId && supabaseClient) {
+            await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, result.error || 'Failed to send email');
+          }
           return {
             success: false,
             error: result.error || 'Failed to send email',
@@ -219,6 +239,10 @@ export class EmailService {
       }
     } catch (error: any) {
       console.error('Error sending email:', error);
+      // Update notification status to 'failed' if notificationId provided
+      if (notificationId && supabaseClient) {
+        await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, error.message || 'Failed to send email');
+      }
       return {
         success: false,
         error: error.message || 'Failed to send email',
@@ -386,7 +410,8 @@ export class EmailService {
     textBodyTemplate: string,
     to: string,
     variables: Record<string, any>,
-    supabaseClient?: any
+    supabaseClient?: any,
+    notificationId?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       // Substitute variables in templates
@@ -399,13 +424,50 @@ export class EmailService {
         subject,
         htmlBody,
         textBody,
-      }, supabaseClient);
+      }, supabaseClient, notificationId);
     } catch (error: any) {
       console.error('Error sending email with template:', error);
       return {
         success: false,
         error: error.message || 'Failed to send email with template',
       };
+    }
+  }
+
+  // Update notification status in database
+  private async updateNotificationStatus(
+    supabaseClient: any,
+    notificationId: string,
+    status: 'sent' | 'failed',
+    messageId?: string,
+    errorMessage?: string
+  ): Promise<void> {
+    try {
+      const updateData: any = {
+        status,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (messageId) {
+        updateData.message_id = messageId;
+      }
+
+      if (errorMessage) {
+        updateData.error_message = errorMessage;
+      }
+
+      const { error } = await supabaseClient
+        .from('notification_history')
+        .update(updateData)
+        .eq('id', notificationId);
+
+      if (error) {
+        console.error('Failed to update notification status:', error);
+      } else {
+        console.log(`Notification ${notificationId} status updated to ${status}`);
+      }
+    } catch (error) {
+      console.error('Error updating notification status:', error);
     }
   }
 }

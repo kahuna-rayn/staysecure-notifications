@@ -6,7 +6,8 @@ import {
   Eye, 
   Trash2, 
   Copy,
-  Send
+  Send,
+  Mail
 } from 'lucide-react';
 
 interface EmailTemplate {
@@ -178,9 +179,28 @@ export default function EmailTemplateManager({
       // Generate sample variables based on template type
       const sampleVariables = generateSampleVariables(template.type);
       
+      // Create a notification record first to track the test email
+      const { data: notificationData, error: notificationError } = await supabaseClient
+        .from('notification_history')
+        .insert({
+          type: template.type,
+          recipient_email: user.email,
+          subject: template.subject_template,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (notificationError) {
+        console.error('Failed to create notification record:', notificationError);
+        // Continue without notification tracking
+      }
+      
       // Use the EmailService to send test email with the actual template data
-      const { EmailService } = await import('../lib/emailService');
-      const service = new EmailService();
+      const { emailService } = await import('../lib/emailService');
+      const service = emailService;
       
       // Use the actual template data instead of looking it up by type
       const result = await service.sendEmailWithTemplate(
@@ -189,7 +209,8 @@ export default function EmailTemplateManager({
         template.text_body_template || '',
         user.email,
         sampleVariables,
-        supabaseClient
+        supabaseClient,
+        notificationData?.id // Pass notification ID for status tracking
       );
 
       if (result.success) {
