@@ -80,13 +80,26 @@ export default function RecentEmailNotifications({
     try {
       setLoading(true);
       const { data, error } = await supabaseClient
-        .from('email_notifications')
+        .from('notification_history')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100); // Show last 100 notifications
 
       if (error) throw error;
-      setNotifications(data || []);
+      
+      // Map notification_history fields to the expected format
+      const mappedData = (data || []).map(notification => ({
+        id: notification.id,
+        title: notification.trigger_event.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        message: `Notification of type ${notification.trigger_event}`,
+        type: notification.trigger_event,
+        status: notification.status,
+        email: 'User Email', // notification_history doesn't have email directly
+        sent_at: notification.sent_at || notification.created_at,
+        error_message: notification.error_message
+      }));
+      
+      setNotifications(mappedData);
     } catch (err: any) {
       setError(err.message);
     } finally {
