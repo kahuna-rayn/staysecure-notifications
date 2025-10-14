@@ -1,6 +1,6 @@
 (function(global, factory) {
   typeof exports === "object" && typeof module !== "undefined" ? factory(exports, require("react/jsx-runtime"), require("react"), require("@tanstack/react-query"), require("@supabase/supabase-js")) : typeof define === "function" && define.amd ? define(["exports", "react/jsx-runtime", "react", "@tanstack/react-query", "@supabase/supabase-js"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.NotificationSystem = {}, global["react/jsx-runtime"], global.React, global.ReactQuery));
-})(this, function(exports2, jsxRuntime, react, reactQuery) {
+})(this, function(exports2, jsxRuntime, React, reactQuery) {
   "use strict";var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
@@ -38,7 +38,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    * This source code is licensed under the ISC license.
    * See the LICENSE file in the root directory of this source tree.
    */
-  const Icon = react.forwardRef(
+  const Icon = React.forwardRef(
     ({
       color = "currentColor",
       size = 24,
@@ -49,7 +49,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       iconNode,
       ...rest
     }, ref) => {
-      return react.createElement(
+      return React.createElement(
         "svg",
         {
           ref,
@@ -62,7 +62,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ...rest
         },
         [
-          ...iconNode.map(([tag, attrs]) => react.createElement(tag, attrs)),
+          ...iconNode.map(([tag, attrs]) => React.createElement(tag, attrs)),
           ...Array.isArray(children) ? children : [children]
         ]
       );
@@ -75,8 +75,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    * See the LICENSE file in the root directory of this source tree.
    */
   const createLucideIcon = (iconName, iconNode) => {
-    const Component = react.forwardRef(
-      ({ className, ...props }, ref) => react.createElement(Icon, {
+    const Component = React.forwardRef(
+      ({ className, ...props }, ref) => React.createElement(Icon, {
         ref,
         iconNode,
         className: mergeClasses(`lucide-${toKebabCase(iconName)}`, className),
@@ -223,6 +223,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    */
   const Filter = createLucideIcon("Filter", [
     ["polygon", { points: "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3", key: "1yg77f" }]
+  ]);
+  /**
+   * @license lucide-react v0.462.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   */
+  const LoaderCircle = createLucideIcon("LoaderCircle", [
+    ["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]
   ]);
   /**
    * @license lucide-react v0.462.0 - ISC
@@ -751,16 +760,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     SelectValue,
     Textarea
   }) => {
-    const [preferences, setPreferences] = react.useState(null);
-    const [loading, setLoading] = react.useState(true);
-    const [sending, setSending] = react.useState(false);
-    const [testEmailType, setTestEmailType] = react.useState("system_alert");
-    react.useEffect(() => {
+    const [preferences, setPreferences] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    const [sending, setSending] = React.useState(false);
+    const [testEmailType, setTestEmailType] = React.useState("system_alert");
+    React.useEffect(() => {
       if (awsConfig) {
         EmailService.configure(awsConfig);
       }
     }, [awsConfig]);
-    react.useEffect(() => {
+    React.useEffect(() => {
       loadPreferences();
     }, []);
     const loadPreferences = async () => {
@@ -1076,17 +1085,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     PopoverTrigger,
     isSuperAdmin = false
   }) {
-    const [templates, setTemplates] = react.useState([]);
-    const [loading, setLoading] = react.useState(true);
-    const [error, setError] = react.useState(null);
-    const [searchTerm, setSearchTerm] = react.useState("");
-    const [statusFilter, setStatusFilter] = react.useState("all");
-    const [typeFilter, setTypeFilter] = react.useState("all");
-    const [selectedTemplate, setSelectedTemplate] = react.useState(null);
-    const [isEditing, setIsEditing] = react.useState(false);
-    const [isViewing, setIsViewing] = react.useState(false);
-    const [isCreating, setIsCreating] = react.useState(false);
-    react.useEffect(() => {
+    console.log("🔥 EmailTemplateManager component is rendering!");
+    const [templates, setTemplates] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+    const [searchTerm, setSearchTerm] = React.useState("");
+    const [statusFilter, setStatusFilter] = React.useState("all");
+    const [typeFilter, setTypeFilter] = React.useState("all");
+    const [selectedTemplate, setSelectedTemplate] = React.useState(null);
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [isViewing, setIsViewing] = React.useState(false);
+    const [isCreating, setIsCreating] = React.useState(false);
+    const [sendingEmail, setSendingEmail] = React.useState(null);
+    const [emailDialog, setEmailDialog] = React.useState({ open: false, type: "success", message: "" });
+    React.useEffect(() => {
+      const style = document.createElement("style");
+      style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+      document.head.appendChild(style);
+      return () => document.head.removeChild(style);
+    }, []);
+    React.useEffect(() => {
       loadTemplates();
     }, []);
     const loadTemplates = async () => {
@@ -1142,9 +1165,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     };
     const handleSendTest = async (template) => {
       try {
+        console.log("🚀 Starting send test for template:", template.id);
+        setSendingEmail(template.id);
+        console.log("✅ sendingEmail state set to:", template.id);
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!(user == null ? void 0 : user.email)) {
-          alert("No user email found for testing");
+          console.log("❌ No user email found");
+          setEmailDialog({
+            open: true,
+            type: "error",
+            message: "No user email found for testing"
+          });
           return;
         }
         const sampleVariables = generateSampleVariables(template.type);
@@ -1174,12 +1205,30 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           // Pass notification ID for status tracking
         );
         if (result.success) {
-          alert(`Test email sent successfully to ${user.email}`);
+          console.log("✅ Email sent successfully, showing dialog");
+          setEmailDialog({
+            open: true,
+            type: "success",
+            message: `Test email sent successfully to ${user.email}`
+          });
         } else {
-          alert(`Failed to send test email: ${result.error}`);
+          console.log("❌ Email send failed:", result.error);
+          setEmailDialog({
+            open: true,
+            type: "error",
+            message: `Failed to send test email: ${result.error}`
+          });
         }
       } catch (err) {
-        alert(`Error sending test email: ${err.message}`);
+        console.log("❌ Error in handleSendTest:", err);
+        setEmailDialog({
+          open: true,
+          type: "error",
+          message: `Error sending test email: ${err.message}`
+        });
+      } finally {
+        console.log("🔄 Clearing sendingEmail state");
+        setSendingEmail(null);
       }
     };
     const handleCreate = () => {
@@ -1320,7 +1369,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         error
       ] }) });
     }
+    console.log("🎯 About to render EmailTemplateManager with red banner!");
     return /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-6", children: [
+      /* @__PURE__ */ jsxRuntime.jsx("div", { className: "bg-red-500 text-white p-4 rounded-lg text-center font-bold text-xl", children: "🚀 LATEST CODE LOADED - DEBUG VERSION 2025-01-14 12:30PM 🚀" }),
       /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntime.jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
@@ -1434,9 +1485,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               {
                 variant: "outline",
                 size: "sm",
-                onClick: () => handleSendTest(template),
+                onClick: () => {
+                  alert("DEBUG: Send button clicked! Check console for more details.");
+                  console.log("🔘 Send button clicked for template:", template.id);
+                  console.log("🔘 Current sendingEmail state:", sendingEmail);
+                  handleSendTest(template);
+                },
                 title: "Send Test Email",
-                children: /* @__PURE__ */ jsxRuntime.jsx(Send, { className: "h-4 w-4" })
+                disabled: sendingEmail === template.id,
+                children: sendingEmail === template.id ? /* @__PURE__ */ jsxRuntime.jsx(
+                  LoaderCircle,
+                  {
+                    className: "h-4 w-4",
+                    style: {
+                      animation: "spin 1s linear infinite",
+                      transformOrigin: "center"
+                    }
+                  }
+                ) : /* @__PURE__ */ jsxRuntime.jsx(Send, { className: "h-4 w-4" })
               }
             ),
             !template.is_system && /* @__PURE__ */ jsxRuntime.jsx(
@@ -1597,6 +1663,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             ] })
           ] })
         )
+      ] }) }),
+      /* @__PURE__ */ jsxRuntime.jsx(Dialog, { open: emailDialog.open, onOpenChange: (open) => setEmailDialog({ ...emailDialog, open }), children: /* @__PURE__ */ jsxRuntime.jsxs(DialogContent, { className: "sm:max-w-md", children: [
+        /* @__PURE__ */ jsxRuntime.jsx(DialogHeader, { children: /* @__PURE__ */ jsxRuntime.jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
+          emailDialog.type === "success" ? /* @__PURE__ */ jsxRuntime.jsx(CircleCheckBig, { className: "h-5 w-5 text-green-600" }) : /* @__PURE__ */ jsxRuntime.jsx(CircleX, { className: "h-5 w-5 text-red-600" }),
+          emailDialog.type === "success" ? "Email Sent Successfully" : "Email Send Failed"
+        ] }) }),
+        /* @__PURE__ */ jsxRuntime.jsx("div", { className: "py-4", children: /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-sm text-gray-600", children: emailDialog.message }) }),
+        /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntime.jsx(Button, { onClick: () => setEmailDialog({ ...emailDialog, open: false }), children: "OK" }) })
       ] }) })
     ] });
   }
@@ -1619,13 +1693,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Alert,
     AlertDescription
   }) {
-    const [notifications, setNotifications] = react.useState([]);
-    const [loading, setLoading] = react.useState(true);
-    const [error, setError] = react.useState(null);
-    const [searchTerm, setSearchTerm] = react.useState("");
-    const [statusFilter, setStatusFilter] = react.useState("all");
-    const [typeFilter, setTypeFilter] = react.useState("all");
-    react.useEffect(() => {
+    const [notifications, setNotifications] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+    const [searchTerm, setSearchTerm] = React.useState("");
+    const [statusFilter, setStatusFilter] = React.useState("all");
+    const [typeFilter, setTypeFilter] = React.useState("all");
+    React.useEffect(() => {
       loadNotifications();
     }, []);
     const loadNotifications = async () => {
@@ -1864,7 +1938,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const supabase = null;
   const useNotifications = (filters = {}) => {
     const queryClient = reactQuery.useQueryClient();
-    const [unreadCount, setUnreadCount] = react.useState(0);
+    const [unreadCount, setUnreadCount] = React.useState(0);
     const {
       data: notifications = [],
       isLoading,
@@ -1929,7 +2003,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       refetchInterval: 1e4
       // Refetch every 10 seconds
     });
-    react.useEffect(() => {
+    React.useEffect(() => {
       if (unreadData !== void 0) {
         setUnreadCount(unreadData);
       }
@@ -1977,16 +2051,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
       }
     });
-    const markAsRead = react.useCallback(async (id) => {
+    const markAsRead = React.useCallback(async (id) => {
       await markAsReadMutation.mutateAsync(id);
     }, [markAsReadMutation]);
-    const markAllAsRead = react.useCallback(async () => {
+    const markAllAsRead = React.useCallback(async () => {
       await markAllAsReadMutation.mutateAsync();
     }, [markAllAsReadMutation]);
-    const deleteNotification = react.useCallback(async (id) => {
+    const deleteNotification = React.useCallback(async (id) => {
       await deleteNotificationMutation.mutateAsync(id);
     }, [deleteNotificationMutation]);
-    const refresh = react.useCallback(() => {
+    const refresh = React.useCallback(() => {
       refetch();
     }, [refetch]);
     return {
@@ -3838,7 +3912,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       updatePreferences,
       updateTypePreference
     } = useNotificationSettings(userId);
-    const [isExpanded, setIsExpanded] = react.useState(false);
+    const [isExpanded, setIsExpanded] = React.useState(false);
     if (isLoading) {
       return /* @__PURE__ */ jsxRuntime.jsx("div", { className: `p-4 ${className}`, children: /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-center text-gray-500", children: "Loading settings..." }) });
     }
@@ -4083,9 +4157,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     className = "",
     maxNotifications = 50
   }) => {
-    const [isOpen, setIsOpen] = react.useState(false);
-    const [showSettings, setShowSettings] = react.useState(false);
-    const [filters, setFilters] = react.useState({
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [showSettings, setShowSettings] = React.useState(false);
+    const [filters, setFilters] = React.useState({
       userId,
       unreadOnly: false,
       limit: maxNotifications

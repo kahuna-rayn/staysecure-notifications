@@ -2,7 +2,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import { jsx, jsxs } from "react/jsx-runtime";
-import { forwardRef, createElement, useState, useEffect, useCallback } from "react";
+import React, { forwardRef, createElement, useState, useEffect, useCallback } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import "@supabase/supabase-js";
 /**
@@ -223,6 +223,15 @@ const Eye = createLucideIcon("Eye", [
  */
 const Filter = createLucideIcon("Filter", [
   ["polygon", { points: "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3", key: "1yg77f" }]
+]);
+/**
+ * @license lucide-react v0.462.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const LoaderCircle = createLucideIcon("LoaderCircle", [
+  ["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]
 ]);
 /**
  * @license lucide-react v0.462.0 - ISC
@@ -1076,6 +1085,7 @@ function EmailTemplateManager({
   PopoverTrigger,
   isSuperAdmin = false
 }) {
+  console.log("🔥 EmailTemplateManager component is rendering!");
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1086,6 +1096,19 @@ function EmailTemplateManager({
   const [isEditing, setIsEditing] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(null);
+  const [emailDialog, setEmailDialog] = useState({ open: false, type: "success", message: "" });
+  React.useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
   useEffect(() => {
     loadTemplates();
   }, []);
@@ -1142,9 +1165,17 @@ function EmailTemplateManager({
   };
   const handleSendTest = async (template) => {
     try {
+      console.log("🚀 Starting send test for template:", template.id);
+      setSendingEmail(template.id);
+      console.log("✅ sendingEmail state set to:", template.id);
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!(user == null ? void 0 : user.email)) {
-        alert("No user email found for testing");
+        console.log("❌ No user email found");
+        setEmailDialog({
+          open: true,
+          type: "error",
+          message: "No user email found for testing"
+        });
         return;
       }
       const sampleVariables = generateSampleVariables(template.type);
@@ -1174,12 +1205,30 @@ function EmailTemplateManager({
         // Pass notification ID for status tracking
       );
       if (result.success) {
-        alert(`Test email sent successfully to ${user.email}`);
+        console.log("✅ Email sent successfully, showing dialog");
+        setEmailDialog({
+          open: true,
+          type: "success",
+          message: `Test email sent successfully to ${user.email}`
+        });
       } else {
-        alert(`Failed to send test email: ${result.error}`);
+        console.log("❌ Email send failed:", result.error);
+        setEmailDialog({
+          open: true,
+          type: "error",
+          message: `Failed to send test email: ${result.error}`
+        });
       }
     } catch (err) {
-      alert(`Error sending test email: ${err.message}`);
+      console.log("❌ Error in handleSendTest:", err);
+      setEmailDialog({
+        open: true,
+        type: "error",
+        message: `Error sending test email: ${err.message}`
+      });
+    } finally {
+      console.log("🔄 Clearing sendingEmail state");
+      setSendingEmail(null);
     }
   };
   const handleCreate = () => {
@@ -1320,7 +1369,9 @@ function EmailTemplateManager({
       error
     ] }) });
   }
+  console.log("🎯 About to render EmailTemplateManager with red banner!");
   return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsx("div", { className: "bg-red-500 text-white p-4 rounded-lg text-center font-bold text-xl", children: "🚀 LATEST CODE LOADED - DEBUG VERSION 2025-01-14 12:30PM 🚀" }),
     /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
@@ -1434,9 +1485,24 @@ function EmailTemplateManager({
             {
               variant: "outline",
               size: "sm",
-              onClick: () => handleSendTest(template),
+              onClick: () => {
+                alert("DEBUG: Send button clicked! Check console for more details.");
+                console.log("🔘 Send button clicked for template:", template.id);
+                console.log("🔘 Current sendingEmail state:", sendingEmail);
+                handleSendTest(template);
+              },
               title: "Send Test Email",
-              children: /* @__PURE__ */ jsx(Send, { className: "h-4 w-4" })
+              disabled: sendingEmail === template.id,
+              children: sendingEmail === template.id ? /* @__PURE__ */ jsx(
+                LoaderCircle,
+                {
+                  className: "h-4 w-4",
+                  style: {
+                    animation: "spin 1s linear infinite",
+                    transformOrigin: "center"
+                  }
+                }
+              ) : /* @__PURE__ */ jsx(Send, { className: "h-4 w-4" })
             }
           ),
           !template.is_system && /* @__PURE__ */ jsx(
@@ -1597,6 +1663,14 @@ function EmailTemplateManager({
           ] })
         ] })
       )
+    ] }) }),
+    /* @__PURE__ */ jsx(Dialog, { open: emailDialog.open, onOpenChange: (open) => setEmailDialog({ ...emailDialog, open }), children: /* @__PURE__ */ jsxs(DialogContent, { className: "sm:max-w-md", children: [
+      /* @__PURE__ */ jsx(DialogHeader, { children: /* @__PURE__ */ jsxs(DialogTitle, { className: "flex items-center gap-2", children: [
+        emailDialog.type === "success" ? /* @__PURE__ */ jsx(CircleCheckBig, { className: "h-5 w-5 text-green-600" }) : /* @__PURE__ */ jsx(CircleX, { className: "h-5 w-5 text-red-600" }),
+        emailDialog.type === "success" ? "Email Sent Successfully" : "Email Send Failed"
+      ] }) }),
+      /* @__PURE__ */ jsx("div", { className: "py-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-600", children: emailDialog.message }) }),
+      /* @__PURE__ */ jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsx(Button, { onClick: () => setEmailDialog({ ...emailDialog, open: false }), children: "OK" }) })
     ] }) })
   ] });
 }

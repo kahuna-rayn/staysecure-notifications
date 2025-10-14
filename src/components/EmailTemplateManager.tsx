@@ -7,7 +7,10 @@ import {
   Trash2, 
   Copy,
   Send,
-  Mail
+  Mail,
+  Loader2,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 
 interface EmailTemplate {
@@ -83,6 +86,8 @@ export default function EmailTemplateManager({
   PopoverTrigger,
   isSuperAdmin = false
 }: EmailTemplateManagerProps) {
+  console.log('🔥 EmailTemplateManager component is rendering!');
+  
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +98,25 @@ export default function EmailTemplateManager({
   const [isEditing, setIsEditing] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [emailDialog, setEmailDialog] = useState<{
+    open: boolean;
+    type: 'success' | 'error';
+    message: string;
+  }>({ open: false, type: 'success', message: '' });
+
+  // Add CSS animation keyframes
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
 
   // Load templates
   useEffect(() => {
@@ -169,10 +193,19 @@ export default function EmailTemplateManager({
 
   const handleSendTest = async (template: EmailTemplate) => {
     try {
+      console.log('🚀 Starting send test for template:', template.id);
+      setSendingEmail(template.id);
+      console.log('✅ sendingEmail state set to:', template.id);
+      
       // Get current user's email for testing
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user?.email) {
-        alert('No user email found for testing');
+        console.log('❌ No user email found');
+        setEmailDialog({
+          open: true,
+          type: 'error',
+          message: 'No user email found for testing'
+        });
         return;
       }
 
@@ -215,12 +248,30 @@ export default function EmailTemplateManager({
       );
 
       if (result.success) {
-        alert(`Test email sent successfully to ${user.email}`);
+        console.log('✅ Email sent successfully, showing dialog');
+        setEmailDialog({
+          open: true,
+          type: 'success',
+          message: `Test email sent successfully to ${user.email}`
+        });
       } else {
-        alert(`Failed to send test email: ${result.error}`);
+        console.log('❌ Email send failed:', result.error);
+        setEmailDialog({
+          open: true,
+          type: 'error',
+          message: `Failed to send test email: ${result.error}`
+        });
       }
     } catch (err: any) {
-      alert(`Error sending test email: ${err.message}`);
+      console.log('❌ Error in handleSendTest:', err);
+      setEmailDialog({
+        open: true,
+        type: 'error',
+        message: `Error sending test email: ${err.message}`
+      });
+    } finally {
+      console.log('🔄 Clearing sendingEmail state');
+      setSendingEmail(null);
     }
   };
 
@@ -393,8 +444,15 @@ export default function EmailTemplateManager({
     );
   }
 
+  console.log('🎯 About to render EmailTemplateManager with red banner!');
+  
   return (
     <div className="space-y-6">
+      {/* DEBUG MESSAGE - REMOVE AFTER TESTING */}
+      <div className="bg-red-500 text-white p-4 rounded-lg text-center font-bold text-xl">
+        🚀 LATEST CODE LOADED - DEBUG VERSION 2025-01-14 12:30PM 🚀
+      </div>
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -541,10 +599,26 @@ export default function EmailTemplateManager({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleSendTest(template)}
+                            onClick={() => {
+                              alert('DEBUG: Send button clicked! Check console for more details.');
+                              console.log('🔘 Send button clicked for template:', template.id);
+                              console.log('🔘 Current sendingEmail state:', sendingEmail);
+                              handleSendTest(template);
+                            }}
                             title="Send Test Email"
+                            disabled={sendingEmail === template.id}
                           >
-                            <Send className="h-4 w-4" />
+                            {sendingEmail === template.id ? (
+                              <Loader2 
+                                className="h-4 w-4" 
+                                style={{ 
+                                  animation: 'spin 1s linear infinite',
+                                  transformOrigin: 'center'
+                                }}
+                              />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
                           </Button>
                           {!template.is_system && (
                             <Button
@@ -717,6 +791,30 @@ export default function EmailTemplateManager({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Email Send Result Dialog */}
+      <Dialog open={emailDialog.open} onOpenChange={(open) => setEmailDialog({ ...emailDialog, open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {emailDialog.type === 'success' ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
+              {emailDialog.type === 'success' ? 'Email Sent Successfully' : 'Email Send Failed'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">{emailDialog.message}</p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setEmailDialog({ ...emailDialog, open: false })}>
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
