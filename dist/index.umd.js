@@ -1270,7 +1270,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         isSuperAdmin ? /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntime.jsxs(
           Button,
           {
-            className: "bg-learning-primary hover:bg-learning-primary/90",
             onClick: handleCreate,
             children: [
               /* @__PURE__ */ jsxRuntime.jsx(Plus, { className: "h-4 w-4 mr-2" }),
@@ -1743,15 +1742,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ] }) })
         ] }, notification.id)) })
       ] }) }) }) }),
-      notifications.length > 0 && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
-        /* @__PURE__ */ jsxRuntime.jsx(Card, { children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+      notifications.length > 0 && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-4 gap-4", children: [
+        /* @__PURE__ */ jsxRuntime.jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsxRuntime.jsx(CircleCheckBig, { className: "h-5 w-5 text-green-600" }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-2xl font-bold text-green-600", children: notifications.filter((n) => n.status === "sent").length }),
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground", children: "Sent" })
           ] })
         ] }) }) }),
-        /* @__PURE__ */ jsxRuntime.jsx(Card, { children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsxRuntime.jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsxRuntime.jsx(CircleX, { className: "h-5 w-5 text-red-600" }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-2xl font-bold text-red-600", children: notifications.filter((n) => n.status === "failed").length }),
@@ -1759,7 +1758,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             notifications.filter((n) => n.status === "failed").length > 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-red-700 mt-1 font-medium", children: "Check error messages above" })
           ] })
         ] }) }) }),
-        /* @__PURE__ */ jsxRuntime.jsx(Card, { children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsxRuntime.jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsxRuntime.jsx(Clock, { className: "h-5 w-5 text-yellow-600" }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-2xl font-bold text-yellow-600", children: notifications.filter((n) => n.status === "pending").length }),
@@ -1767,7 +1766,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             notifications.filter((n) => n.status === "pending").length > 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-yellow-700 mt-1 font-medium", children: "Being processed" })
           ] })
         ] }) }) }),
-        /* @__PURE__ */ jsxRuntime.jsx(Card, { children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsxRuntime.jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsxRuntime.jsx(Mail$1, { className: "h-5 w-5 text-blue-600" }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-2xl font-bold text-blue-600", children: notifications.length }),

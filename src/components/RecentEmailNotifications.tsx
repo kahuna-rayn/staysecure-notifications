@@ -310,8 +310,8 @@ export default function RecentEmailNotifications({
 
       {/* Summary Stats */}
       {notifications.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+        <div className="grid grid-cols-4 gap-4">
+          <Card className="w-full">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
@@ -324,7 +324,7 @@ export default function RecentEmailNotifications({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="w-full">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <XCircle className="h-5 w-5 text-red-600" />
@@ -342,7 +342,7 @@ export default function RecentEmailNotifications({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="w-full">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-yellow-600" />
@@ -360,7 +360,7 @@ export default function RecentEmailNotifications({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="w-full">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-blue-600" />
