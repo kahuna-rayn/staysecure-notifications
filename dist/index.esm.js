@@ -1662,6 +1662,38 @@ function RecentEmailNotifications({
         "Refresh"
       ] }) })
     ] }),
+    notifications.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-row gap-4", children: [
+      /* @__PURE__ */ jsx(Card, { className: "flex-1", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(CircleCheckBig, { className: "h-5 w-5 text-green-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-green-600", children: notifications.filter((n) => n.status === "sent").length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Sent" })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Card, { className: "flex-1", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(CircleX, { className: "h-5 w-5 text-red-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-red-600", children: notifications.filter((n) => n.status === "failed").length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Failed" }),
+          notifications.filter((n) => n.status === "failed").length > 0 && /* @__PURE__ */ jsx("div", { className: "text-xs text-red-700 mt-1 font-medium", children: "Check error messages above" })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Card, { className: "flex-1", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(Clock, { className: "h-5 w-5 text-yellow-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-yellow-600", children: notifications.filter((n) => n.status === "pending").length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Pending" }),
+          notifications.filter((n) => n.status === "pending").length > 0 && /* @__PURE__ */ jsx("div", { className: "text-xs text-yellow-700 mt-1 font-medium", children: "Being processed" })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ jsx(Card, { className: "flex-1", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsx(Mail$1, { className: "h-5 w-5 text-blue-600" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-blue-600", children: notifications.length }),
+          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Total" })
+        ] })
+      ] }) }) })
+    ] }),
     /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row gap-4", children: [
       /* @__PURE__ */ jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxs("div", { className: "relative", children: [
         /* @__PURE__ */ jsx(Search, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" }),
@@ -1741,39 +1773,7 @@ function RecentEmailNotifications({
           ] })
         ] }) })
       ] }, notification.id)) })
-    ] }) }) }) }),
-    notifications.length > 0 && /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-4 gap-4", children: [
-      /* @__PURE__ */ jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsx(CircleCheckBig, { className: "h-5 w-5 text-green-600" }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-green-600", children: notifications.filter((n) => n.status === "sent").length }),
-          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Sent" })
-        ] })
-      ] }) }) }),
-      /* @__PURE__ */ jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsx(CircleX, { className: "h-5 w-5 text-red-600" }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-red-600", children: notifications.filter((n) => n.status === "failed").length }),
-          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Failed" }),
-          notifications.filter((n) => n.status === "failed").length > 0 && /* @__PURE__ */ jsx("div", { className: "text-xs text-red-700 mt-1 font-medium", children: "Check error messages above" })
-        ] })
-      ] }) }) }),
-      /* @__PURE__ */ jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsx(Clock, { className: "h-5 w-5 text-yellow-600" }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-yellow-600", children: notifications.filter((n) => n.status === "pending").length }),
-          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Pending" }),
-          notifications.filter((n) => n.status === "pending").length > 0 && /* @__PURE__ */ jsx("div", { className: "text-xs text-yellow-700 mt-1 font-medium", children: "Being processed" })
-        ] })
-      ] }) }) }),
-      /* @__PURE__ */ jsx(Card, { className: "w-full", children: /* @__PURE__ */ jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsx(Mail$1, { className: "h-5 w-5 text-blue-600" }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { className: "text-2xl font-bold text-blue-600", children: notifications.length }),
-          /* @__PURE__ */ jsx("div", { className: "text-sm text-muted-foreground", children: "Total" })
-        ] })
-      ] }) }) })
-    ] })
+    ] }) }) }) })
   ] });
 }
 const supabase = null;

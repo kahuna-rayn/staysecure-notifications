@@ -180,6 +180,74 @@ export default function RecentEmailNotifications({
         </div>
       </div>
 
+      {/* Summary Stats */}
+      {notifications.length > 0 && (
+        <div className="flex flex-row gap-4">
+          <Card className="flex-1">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {notifications.filter(n => n.status === 'sent').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Sent</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="flex-1">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {notifications.filter(n => n.status === 'failed').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Failed</div>
+                  {notifications.filter(n => n.status === 'failed').length > 0 && (
+                    <div className="text-xs text-red-700 mt-1 font-medium">
+                      Check error messages above
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="flex-1">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {notifications.filter(n => n.status === 'pending').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Pending</div>
+                  {notifications.filter(n => n.status === 'pending').length > 0 && (
+                    <div className="text-xs text-yellow-700 mt-1 font-medium">
+                      Being processed
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="flex-1">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Mail className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {notifications.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -306,74 +374,6 @@ export default function RecentEmailNotifications({
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Summary Stats */}
-      {notifications.length > 0 && (
-        <div className="grid grid-cols-4 gap-4">
-          <Card className="w-full">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {notifications.filter(n => n.status === 'sent').length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Sent</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="w-full">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <XCircle className="h-5 w-5 text-red-600" />
-                <div>
-                  <div className="text-2xl font-bold text-red-600">
-                    {notifications.filter(n => n.status === 'failed').length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Failed</div>
-                  {notifications.filter(n => n.status === 'failed').length > 0 && (
-                    <div className="text-xs text-red-700 mt-1 font-medium">
-                      Check error messages above
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="w-full">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-yellow-600" />
-                <div>
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {notifications.filter(n => n.status === 'pending').length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Pending</div>
-                  {notifications.filter(n => n.status === 'pending').length > 0 && (
-                    <div className="text-xs text-yellow-700 mt-1 font-medium">
-                      Being processed
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="w-full">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-blue-600" />
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {notifications.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Total</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       )}
     </div>
   );
