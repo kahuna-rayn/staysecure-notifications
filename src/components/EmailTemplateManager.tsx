@@ -382,7 +382,7 @@ export default function EmailTemplateManager({
         {isSuperAdmin ? (
           <div className="flex items-center space-x-2">
             <Button 
-              className="bg-learning-primary hover:bg-learning-primary/90 text-learning-primary-foreground"
+              className="bg-learning-primary hover:bg-learning-primary/90"
               onClick={handleCreate}
             >
               <Plus className="h-4 w-4 mr-2" />
