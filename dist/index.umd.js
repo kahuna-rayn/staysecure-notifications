@@ -250,6 +250,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
    * This source code is licensed under the ISC license.
    * See the LICENSE file in the root directory of this source tree.
    */
+  const RefreshCw = createLucideIcon("RefreshCw", [
+    ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+    ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+    ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+    ["path", { d: "M8 16H3v5", key: "1cv678" }]
+  ]);
+  /**
+   * @license lucide-react v0.462.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   */
   const Search = createLucideIcon("Search", [
     ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }],
     ["path", { d: "m21 21-4.3-4.3", key: "1qie3q" }]
@@ -1647,7 +1659,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-muted-foreground", children: "View sent email notifications and their status" })
         ] }),
         /* @__PURE__ */ jsxRuntime.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntime.jsxs(Button, { variant: "outline", size: "sm", onClick: loadNotifications, children: [
-          /* @__PURE__ */ jsxRuntime.jsx(Mail$1, { className: "h-4 w-4 mr-2" }),
+          /* @__PURE__ */ jsxRuntime.jsx(RefreshCw, { className: "h-4 w-4 mr-2" }),
           "Refresh"
         ] }) })
       ] }),

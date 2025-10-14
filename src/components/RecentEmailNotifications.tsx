@@ -8,7 +8,8 @@ import {
   AlertCircle,
   User,
   Calendar,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 
 interface EmailNotification {
@@ -173,7 +174,7 @@ export default function RecentEmailNotifications({
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={loadNotifications}>
-            <Mail className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
