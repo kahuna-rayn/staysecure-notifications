@@ -334,7 +334,7 @@ export default function RecentEmailNotifications({
                   </div>
                   <div className="text-sm text-muted-foreground">Failed</div>
                   {notifications.filter(n => n.status === 'failed').length > 0 && (
-                    <div className="text-xs text-red-500 mt-1">
+                    <div className="text-xs text-red-700 mt-1 font-medium">
                       Check error messages above
                     </div>
                   )}
@@ -352,7 +352,7 @@ export default function RecentEmailNotifications({
                   </div>
                   <div className="text-sm text-muted-foreground">Pending</div>
                   {notifications.filter(n => n.status === 'pending').length > 0 && (
-                    <div className="text-xs text-yellow-600 mt-1">
+                    <div className="text-xs text-yellow-700 mt-1 font-medium">
                       Being processed
                     </div>
                   )}

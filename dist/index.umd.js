@@ -1756,7 +1756,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-2xl font-bold text-red-600", children: notifications.filter((n) => n.status === "failed").length }),
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground", children: "Failed" }),
-            notifications.filter((n) => n.status === "failed").length > 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-red-500 mt-1", children: "Check error messages above" })
+            notifications.filter((n) => n.status === "failed").length > 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-red-700 mt-1 font-medium", children: "Check error messages above" })
           ] })
         ] }) }) }),
         /* @__PURE__ */ jsxRuntime.jsx(Card, { children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
@@ -1764,7 +1764,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-2xl font-bold text-yellow-600", children: notifications.filter((n) => n.status === "pending").length }),
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground", children: "Pending" }),
-            notifications.filter((n) => n.status === "pending").length > 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-yellow-600 mt-1", children: "Being processed" })
+            notifications.filter((n) => n.status === "pending").length > 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-yellow-700 mt-1 font-medium", children: "Being processed" })
           ] })
         ] }) }) }),
         /* @__PURE__ */ jsxRuntime.jsx(Card, { children: /* @__PURE__ */ jsxRuntime.jsx(CardContent, { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
