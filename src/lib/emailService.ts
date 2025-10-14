@@ -445,11 +445,10 @@ export class EmailService {
     try {
       const updateData: any = {
         status,
-        updated_at: new Date().toISOString(),
       };
 
-      if (messageId) {
-        updateData.message_id = messageId;
+      if (status === 'sent') {
+        updateData.sent_at = new Date().toISOString();
       }
 
       if (errorMessage) {

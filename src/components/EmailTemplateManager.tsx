@@ -183,12 +183,12 @@ export default function EmailTemplateManager({
       const { data: notificationData, error: notificationError } = await supabaseClient
         .from('notification_history')
         .insert({
-          type: template.type,
-          recipient_email: user.email,
-          subject: template.subject_template,
+          user_id: user.id,
+          trigger_event: template.type,
+          template_variables: sampleVariables,
           status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          channel: 'email',
+          priority: 'normal'
         })
         .select('id')
         .single();

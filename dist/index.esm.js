@@ -699,11 +699,10 @@ const _EmailService = class _EmailService {
   async updateNotificationStatus(supabaseClient, notificationId, status, messageId, errorMessage) {
     try {
       const updateData = {
-        status,
-        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        status
       };
-      if (messageId) {
-        updateData.message_id = messageId;
+      if (status === "sent") {
+        updateData.sent_at = (/* @__PURE__ */ new Date()).toISOString();
       }
       if (errorMessage) {
         updateData.error_message = errorMessage;
@@ -1146,12 +1145,12 @@ function EmailTemplateManager({
       }
       const sampleVariables = generateSampleVariables(template.type);
       const { data: notificationData, error: notificationError } = await supabaseClient.from("notification_history").insert({
-        type: template.type,
-        recipient_email: user.email,
-        subject: template.subject_template,
+        user_id: user.id,
+        trigger_event: template.type,
+        template_variables: sampleVariables,
         status: "pending",
-        created_at: (/* @__PURE__ */ new Date()).toISOString(),
-        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        channel: "email",
+        priority: "normal"
       }).select("id").single();
       if (notificationError) {
         console.error("Failed to create notification record:", notificationError);
