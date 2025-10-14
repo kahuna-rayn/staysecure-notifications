@@ -478,6 +478,7 @@ const _EmailService = class _EmailService {
         }
         if (data && data.success) {
           if (notificationId && supabaseClient) {
+            await new Promise((resolve) => setTimeout(resolve, 2e3));
             await this.updateNotificationStatus(supabaseClient, notificationId, "sent", data.messageId);
           }
           return {
@@ -712,6 +713,9 @@ const _EmailService = class _EmailService {
         console.error("Failed to update notification status:", error);
       } else {
         console.log(`Notification ${notificationId} status updated to ${status}`);
+        if (status === "sent") {
+          console.log("⏱️ Status update completed - check Recent tab now!");
+        }
       }
     } catch (error) {
       console.error("Error updating notification status:", error);
@@ -1146,6 +1150,8 @@ function EmailTemplateManager({
       const sampleVariables = generateSampleVariables(template.type);
       const { data: notificationData, error: notificationError } = await supabaseClient.from("notification_history").insert({
         user_id: user.id,
+        email_template_id: template.id,
+        // Include the template ID!
         trigger_event: template.type,
         template_variables: sampleVariables,
         status: "pending",
@@ -1625,19 +1631,24 @@ function RecentEmailNotifications({
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const { data, error: error2 } = await supabaseClient.from("notification_history").select("*").order("created_at", { ascending: false }).limit(100);
+      const { data, error: error2 } = await supabaseClient.from("notification_history").select(`
+          *,
+          user:user_id(email)
+        `).order("created_at", { ascending: false }).limit(100);
       if (error2) throw error2;
-      const mappedData = (data || []).map((notification) => ({
-        id: notification.id,
-        title: notification.trigger_event.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-        message: `Notification of type ${notification.trigger_event}`,
-        type: notification.trigger_event,
-        status: notification.status,
-        email: "User Email",
-        // notification_history doesn't have email directly
-        sent_at: notification.sent_at || notification.created_at,
-        error_message: notification.error_message
-      }));
+      const mappedData = (data || []).map((notification) => {
+        var _a;
+        return {
+          id: notification.id,
+          title: notification.trigger_event.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          message: `Notification of type ${notification.trigger_event}`,
+          type: notification.trigger_event,
+          status: notification.status,
+          email: ((_a = notification.user) == null ? void 0 : _a.email) || "Unknown User",
+          sent_at: notification.sent_at || notification.created_at,
+          error_message: notification.error_message
+        };
+      });
       setNotifications(mappedData);
     } catch (err) {
       setError(err.message);
