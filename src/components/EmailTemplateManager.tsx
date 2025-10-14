@@ -86,8 +86,6 @@ export default function EmailTemplateManager({
   PopoverTrigger,
   isSuperAdmin = false
 }: EmailTemplateManagerProps) {
-  console.log('🔥 EmailTemplateManager component is rendering!');
-  
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -193,14 +191,11 @@ export default function EmailTemplateManager({
 
   const handleSendTest = async (template: EmailTemplate) => {
     try {
-      console.log('🚀 Starting send test for template:', template.id);
       setSendingEmail(template.id);
-      console.log('✅ sendingEmail state set to:', template.id);
       
       // Get current user's email for testing
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user?.email) {
-        console.log('❌ No user email found');
         setEmailDialog({
           open: true,
           type: 'error',
@@ -248,14 +243,12 @@ export default function EmailTemplateManager({
       );
 
       if (result.success) {
-        console.log('✅ Email sent successfully, showing dialog');
         setEmailDialog({
           open: true,
           type: 'success',
           message: `Test email sent successfully to ${user.email}`
         });
       } else {
-        console.log('❌ Email send failed:', result.error);
         setEmailDialog({
           open: true,
           type: 'error',
@@ -263,14 +256,12 @@ export default function EmailTemplateManager({
         });
       }
     } catch (err: any) {
-      console.log('❌ Error in handleSendTest:', err);
       setEmailDialog({
         open: true,
         type: 'error',
         message: `Error sending test email: ${err.message}`
       });
     } finally {
-      console.log('🔄 Clearing sendingEmail state');
       setSendingEmail(null);
     }
   };
@@ -444,15 +435,8 @@ export default function EmailTemplateManager({
     );
   }
 
-  console.log('🎯 About to render EmailTemplateManager with red banner!');
-  
   return (
     <div className="space-y-6">
-      {/* DEBUG MESSAGE - REMOVE AFTER TESTING */}
-      <div className="bg-red-500 text-white p-4 rounded-lg text-center font-bold text-xl">
-        🚀 LATEST CODE LOADED - DEBUG VERSION 2025-01-14 12:30PM 🚀
-      </div>
-      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -599,12 +583,7 @@ export default function EmailTemplateManager({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              alert('DEBUG: Send button clicked! Check console for more details.');
-                              console.log('🔘 Send button clicked for template:', template.id);
-                              console.log('🔘 Current sendingEmail state:', sendingEmail);
-                              handleSendTest(template);
-                            }}
+                            onClick={() => handleSendTest(template)}
                             title="Send Test Email"
                             disabled={sendingEmail === template.id}
                           >

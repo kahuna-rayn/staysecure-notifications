@@ -1085,7 +1085,6 @@ function EmailTemplateManager({
   PopoverTrigger,
   isSuperAdmin = false
 }) {
-  console.log("🔥 EmailTemplateManager component is rendering!");
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1165,12 +1164,9 @@ function EmailTemplateManager({
   };
   const handleSendTest = async (template) => {
     try {
-      console.log("🚀 Starting send test for template:", template.id);
       setSendingEmail(template.id);
-      console.log("✅ sendingEmail state set to:", template.id);
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!(user == null ? void 0 : user.email)) {
-        console.log("❌ No user email found");
         setEmailDialog({
           open: true,
           type: "error",
@@ -1205,14 +1201,12 @@ function EmailTemplateManager({
         // Pass notification ID for status tracking
       );
       if (result.success) {
-        console.log("✅ Email sent successfully, showing dialog");
         setEmailDialog({
           open: true,
           type: "success",
           message: `Test email sent successfully to ${user.email}`
         });
       } else {
-        console.log("❌ Email send failed:", result.error);
         setEmailDialog({
           open: true,
           type: "error",
@@ -1220,14 +1214,12 @@ function EmailTemplateManager({
         });
       }
     } catch (err) {
-      console.log("❌ Error in handleSendTest:", err);
       setEmailDialog({
         open: true,
         type: "error",
         message: `Error sending test email: ${err.message}`
       });
     } finally {
-      console.log("🔄 Clearing sendingEmail state");
       setSendingEmail(null);
     }
   };
@@ -1369,9 +1361,7 @@ function EmailTemplateManager({
       error
     ] }) });
   }
-  console.log("🎯 About to render EmailTemplateManager with red banner!");
   return /* @__PURE__ */ jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsx("div", { className: "bg-red-500 text-white p-4 rounded-lg text-center font-bold text-xl", children: "🚀 LATEST CODE LOADED - DEBUG VERSION 2025-01-14 12:30PM 🚀" }),
     /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
       /* @__PURE__ */ jsxs("div", { children: [
         /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-learning-primary", children: "Email Template Management" }),
@@ -1485,12 +1475,7 @@ function EmailTemplateManager({
             {
               variant: "outline",
               size: "sm",
-              onClick: () => {
-                alert("DEBUG: Send button clicked! Check console for more details.");
-                console.log("🔘 Send button clicked for template:", template.id);
-                console.log("🔘 Current sendingEmail state:", sendingEmail);
-                handleSendTest(template);
-              },
+              onClick: () => handleSendTest(template),
               title: "Send Test Email",
               disabled: sendingEmail === template.id,
               children: sendingEmail === template.id ? /* @__PURE__ */ jsx(
