@@ -174,6 +174,8 @@ export class EmailService {
         if (data && data.success) {
           // Update notification status to 'sent' if notificationId provided
           if (notificationId && supabaseClient) {
+            // Add small delay for testing visibility
+            await new Promise(resolve => setTimeout(resolve, 2000));
             await this.updateNotificationStatus(supabaseClient, notificationId, 'sent', data.messageId);
           }
           return {
@@ -464,6 +466,10 @@ export class EmailService {
         console.error('Failed to update notification status:', error);
       } else {
         console.log(`Notification ${notificationId} status updated to ${status}`);
+        // Add delay for testing visibility
+        if (status === 'sent') {
+          console.log('⏱️ Status update completed - check Recent tab now!');
+        }
       }
     } catch (error) {
       console.error('Error updating notification status:', error);

@@ -184,6 +184,7 @@ export default function EmailTemplateManager({
         .from('notification_history')
         .insert({
           user_id: user.id,
+          email_template_id: template.id, // Include the template ID!
           trigger_event: template.type,
           template_variables: sampleVariables,
           status: 'pending',
