@@ -94,12 +94,12 @@ export default function RecentEmailNotifications({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'sent': return 'bg-green-100 text-green-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'sent': return { backgroundColor: '#dcfce7', color: '#166534', borderColor: '#bbf7d0' };
+      case 'failed': return { backgroundColor: '#fecaca', color: '#991b1b', borderColor: '#fca5a5' };
+      case 'pending': return { backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fde68a' };
+      default: return { backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' };
     }
   };
 
@@ -112,17 +112,17 @@ export default function RecentEmailNotifications({
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeStyle = (type: string) => {
     switch (type) {
-      case 'lesson_completed': return 'bg-green-100 text-green-800';
-      case 'lesson_reminder': return 'bg-orange-100 text-orange-800';
-      case 'quiz_high_score': return 'bg-purple-100 text-purple-800';
-      case 'track_milestone': return 'bg-blue-100 text-blue-800';
-      case 'system_alert': return 'bg-red-100 text-red-800';
-      case 'task_due': return 'bg-yellow-100 text-yellow-800';
-      case 'achievement': return 'bg-pink-100 text-pink-800';
-      case 'course_completion': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'lesson_completed': return { backgroundColor: '#dcfce7', color: '#166534', borderColor: '#bbf7d0' };
+      case 'lesson_reminder': return { backgroundColor: '#fed7aa', color: '#9a3412', borderColor: '#fdba74' };
+      case 'quiz_high_score': return { backgroundColor: '#e9d5ff', color: '#6b21a8', borderColor: '#d8b4fe' };
+      case 'track_milestone': return { backgroundColor: '#dbeafe', color: '#1e40af', borderColor: '#bfdbfe' };
+      case 'system_alert': return { backgroundColor: '#fecaca', color: '#991b1b', borderColor: '#fca5a5' };
+      case 'task_due': return { backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fde68a' };
+      case 'achievement': return { backgroundColor: '#fce7f3', color: '#be185d', borderColor: '#f9a8d4' };
+      case 'course_completion': return { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#c7d2fe' };
+      default: return { backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' };
     }
   };
 
@@ -331,14 +331,20 @@ export default function RecentEmailNotifications({
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(notification.type)}`}>
+                        <span 
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
+                          style={getTypeStyle(notification.type)}
+                        >
                           {notification.type.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(notification.status)}
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`}>
+                          <span 
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
+                            style={getStatusStyle(notification.status)}
+                          >
                             {notification.status}
                           </span>
                         </div>

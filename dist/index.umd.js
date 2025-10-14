@@ -1581,16 +1581,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         setLoading(false);
       }
     };
-    const getStatusColor = (status) => {
+    const getStatusStyle = (status) => {
       switch (status) {
         case "sent":
-          return "bg-green-100 text-green-800";
+          return { backgroundColor: "#dcfce7", color: "#166534", borderColor: "#bbf7d0" };
         case "failed":
-          return "bg-red-100 text-red-800";
+          return { backgroundColor: "#fecaca", color: "#991b1b", borderColor: "#fca5a5" };
         case "pending":
-          return "bg-yellow-100 text-yellow-800";
+          return { backgroundColor: "#fef3c7", color: "#92400e", borderColor: "#fde68a" };
         default:
-          return "bg-gray-100 text-gray-800";
+          return { backgroundColor: "#f3f4f6", color: "#374151", borderColor: "#d1d5db" };
       }
     };
     const getStatusIcon = (status) => {
@@ -1605,26 +1605,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           return /* @__PURE__ */ jsxRuntime.jsx(CircleAlert, { className: "h-4 w-4" });
       }
     };
-    const getTypeColor = (type) => {
+    const getTypeStyle = (type) => {
       switch (type) {
         case "lesson_completed":
-          return "bg-green-100 text-green-800";
+          return { backgroundColor: "#dcfce7", color: "#166534", borderColor: "#bbf7d0" };
         case "lesson_reminder":
-          return "bg-orange-100 text-orange-800";
+          return { backgroundColor: "#fed7aa", color: "#9a3412", borderColor: "#fdba74" };
         case "quiz_high_score":
-          return "bg-purple-100 text-purple-800";
+          return { backgroundColor: "#e9d5ff", color: "#6b21a8", borderColor: "#d8b4fe" };
         case "track_milestone":
-          return "bg-blue-100 text-blue-800";
+          return { backgroundColor: "#dbeafe", color: "#1e40af", borderColor: "#bfdbfe" };
         case "system_alert":
-          return "bg-red-100 text-red-800";
+          return { backgroundColor: "#fecaca", color: "#991b1b", borderColor: "#fca5a5" };
         case "task_due":
-          return "bg-yellow-100 text-yellow-800";
+          return { backgroundColor: "#fef3c7", color: "#92400e", borderColor: "#fde68a" };
         case "achievement":
-          return "bg-pink-100 text-pink-800";
+          return { backgroundColor: "#fce7f3", color: "#be185d", borderColor: "#f9a8d4" };
         case "course_completion":
-          return "bg-indigo-100 text-indigo-800";
+          return { backgroundColor: "#e0e7ff", color: "#3730a3", borderColor: "#c7d2fe" };
         default:
-          return "bg-gray-100 text-gray-800";
+          return { backgroundColor: "#f3f4f6", color: "#374151", borderColor: "#d1d5db" };
       }
     };
     const formatDate = (dateString) => {
@@ -1750,11 +1750,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "font-medium", children: notification.title }),
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground line-clamp-2", children: notification.message })
           ] }) }),
-          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx("span", { className: `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(notification.type)}`, children: notification.type.replace("_", " ") }) }),
+          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx(
+            "span",
+            {
+              className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border",
+              style: getTypeStyle(notification.type),
+              children: notification.type.replace("_", " ")
+            }
+          ) }),
           /* @__PURE__ */ jsxRuntime.jsxs("td", { className: "p-4", children: [
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
               getStatusIcon(notification.status),
-              /* @__PURE__ */ jsxRuntime.jsx("span", { className: `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`, children: notification.status })
+              /* @__PURE__ */ jsxRuntime.jsx(
+                "span",
+                {
+                  className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border",
+                  style: getStatusStyle(notification.status),
+                  children: notification.status
+                }
+              )
             ] }),
             notification.status === "failed" && notification.error_message && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-xs text-red-600 mt-1", children: notification.error_message })
           ] }),
