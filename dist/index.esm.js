@@ -412,11 +412,19 @@ const _EmailService = class _EmailService {
     const path = clientPath ? `/${clientPath}` : "";
     return `${base}${path}/#/lesson/${lessonId}`;
   }
-  // Template variable substitution
+  // Template variable substitution with Handlebars-like conditionals support
+  // Made public so it can be used in preview
   substituteVariables(template, variables) {
     let result = template;
+    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match2, variableName, content) => {
+      const value = variables[variableName];
+      if (value && value !== "" && value !== "false" && value !== "0") {
+        return content;
+      }
+      return "";
+    });
     for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{${key}}}`, "g");
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
       result = result.replace(regex, String(value || ""));
     }
     return result;
@@ -734,10 +742,71 @@ const _EmailService = class _EmailService {
 __publicField(_EmailService, "instance");
 let EmailService = _EmailService;
 const emailService = EmailService.getInstance();
+async function gatherLessonCompletedVariables(supabaseClient, event) {
+  var _a;
+  try {
+    const { data: user } = await supabaseClient.from("profiles").select("full_name, email").eq("id", event.user_id).single();
+    const { data: lesson } = await supabaseClient.from("lessons").select("title, description").eq("id", event.lesson_id).single();
+    let track = null;
+    let progress = null;
+    let lessonsCompleted = 0;
+    let totalLessons = 0;
+    let nextLesson = null;
+    if (event.learning_track_id) {
+      track = await supabaseClient.from("learning_tracks").select("title").eq("id", event.learning_track_id).single();
+      progress = await supabaseClient.from("user_learning_track_progress").select("current_lesson_order").eq("user_id", event.user_id).eq("learning_track_id", event.learning_track_id).maybeSingle();
+      const { data: completedLessons } = await supabaseClient.from("user_lesson_progress").select("lesson_id").eq("user_id", event.user_id).not("completed_at", "is", null);
+      const { data: trackLessons } = await supabaseClient.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", event.learning_track_id);
+      totalLessons = (trackLessons == null ? void 0 : trackLessons.length) || 0;
+      const completedInTrack = (completedLessons == null ? void 0 : completedLessons.filter(
+        (cl) => trackLessons == null ? void 0 : trackLessons.some((tl) => tl.lesson_id === cl.lesson_id)
+      ).length) || 0;
+      lessonsCompleted = completedInTrack;
+      const currentOrder = (progress == null ? void 0 : progress.current_lesson_order) || 0;
+      const { data: nextLessonData } = await supabaseClient.from("learning_track_lessons").select("lesson_id, order_index, lessons(title)").eq("learning_track_id", event.learning_track_id).gt("order_index", currentOrder).order("order_index").limit(1).maybeSingle();
+      if (nextLessonData) {
+        nextLesson = {
+          title: ((_a = nextLessonData.lessons) == null ? void 0 : _a.title) || "Next Lesson",
+          id: nextLessonData.lesson_id
+        };
+      }
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
+    const clientId = event.clientId || "default";
+    const clientPath = clientId !== "default" ? `/${clientId}` : "";
+    const clientLoginUrl = `${origin}${clientPath}/login`;
+    const trackProgressPercentage = totalLessons > 0 ? Math.round(lessonsCompleted / totalLessons * 100) : 0;
+    return {
+      user_name: (user == null ? void 0 : user.full_name) || "User",
+      user_email: (user == null ? void 0 : user.email) || "",
+      lesson_title: (lesson == null ? void 0 : lesson.title) || "Lesson",
+      lesson_description: (lesson == null ? void 0 : lesson.description) || "",
+      learning_track_title: (track == null ? void 0 : track.title) || "",
+      completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US"),
+      completion_time: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      lessons_completed_in_track: lessonsCompleted,
+      total_lessons_in_track: totalLessons,
+      track_progress_percentage: trackProgressPercentage,
+      next_lesson_title: (nextLesson == null ? void 0 : nextLesson.title) || null,
+      next_lesson_available: !!nextLesson,
+      next_lesson_url: clientLoginUrl,
+      // Always use login URL as per requirement
+      client_login_url: clientLoginUrl
+    };
+  } catch (error) {
+    console.error("Error gathering lesson completed variables:", error);
+    return {
+      user_name: "User",
+      lesson_title: "Lesson",
+      client_login_url: "https://staysecure-learn.raynsecure.com/login"
+    };
+  }
+}
 const emailService$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   EmailService,
-  emailService
+  emailService,
+  gatherLessonCompletedVariables
 }, Symbol.toStringTag, { value: "Module" }));
 const EmailNotifications = ({
   supabase: supabase2,
@@ -1269,6 +1338,10 @@ function EmailTemplateManager({
   };
   const generateSampleVariables = (templateType) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+    const pathParts = typeof window !== "undefined" ? window.location.pathname.split("/").filter(Boolean) : [];
+    const clientId = pathParts[0] || "default";
+    const clientPath = clientId !== "default" ? `/${clientId}` : "";
+    const clientLoginUrl = `${origin}${clientPath}/login`;
     const baseVariables = {
       user_name: "John Doe",
       lesson_title: "Introduction to Cybersecurity",
@@ -1283,7 +1356,8 @@ function EmailTemplateManager({
         day: "numeric"
       }),
       reminder_type: "Available Now",
-      lesson_url: `${origin}/#/lesson/sample-lesson-id`
+      lesson_url: `${origin}${clientPath}/#/lesson/sample-lesson-id`,
+      client_login_url: clientLoginUrl
     };
     switch (templateType) {
       case "lesson_completed":
@@ -1294,7 +1368,9 @@ function EmailTemplateManager({
           track_progress_percentage: 50,
           next_lesson_title: "Advanced Security Concepts",
           next_lesson_available: true,
-          next_lesson_url: "http://localhost:8080/#/lesson/next-lesson-id"
+          next_lesson_url: clientLoginUrl,
+          // Use client_login_url instead of hardcoded localhost
+          client_login_url: clientLoginUrl
         };
       case "track_milestone_50":
         return {
@@ -1303,7 +1379,8 @@ function EmailTemplateManager({
           lessons_completed: 5,
           total_lessons: 10,
           time_spent_hours: 12,
-          continue_learning_url: "http://localhost:8080/#/dashboard"
+          continue_learning_url: clientLoginUrl,
+          client_login_url: clientLoginUrl
         };
       case "quiz_high_score":
         return {
@@ -1312,14 +1389,16 @@ function EmailTemplateManager({
           score: 95,
           correct_answers: 19,
           total_questions: 20,
-          view_results_url: "http://localhost:8080/#/quiz/results",
-          continue_learning_url: "http://localhost:8080/#/dashboard"
+          view_results_url: clientLoginUrl,
+          continue_learning_url: clientLoginUrl,
+          client_login_url: clientLoginUrl
         };
       case "lesson_reminder":
         return {
           ...baseVariables,
           lesson_description: "Learn the basics of cybersecurity and how to protect digital assets.",
-          reminder_type: "Available Now"
+          reminder_type: "Available Now",
+          client_login_url: clientLoginUrl
         };
       default:
         return baseVariables;
@@ -1527,10 +1606,21 @@ function EmailTemplateManager({
             /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Subject:" }),
-                /* @__PURE__ */ jsx("div", { className: "mt-1 p-2 bg-gray-50 rounded border", children: selectedTemplate.subject_template.replace(/\{\{(\w+)\}\}/g, (match2, key) => {
+                /* @__PURE__ */ jsx("div", { className: "mt-1 p-2 bg-gray-50 rounded border", children: (() => {
                   const sampleData = generateSampleVariables(selectedTemplate.type);
-                  return sampleData[key] || match2;
-                }) })
+                  let result = selectedTemplate.subject_template;
+                  result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
+                    const value = sampleData[variableName];
+                    if (value && value !== "" && value !== "false" && value !== "0") {
+                      return content;
+                    }
+                    return "";
+                  });
+                  for (const [key, value] of Object.entries(sampleData)) {
+                    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), String(value || ""));
+                  }
+                  return result;
+                })() })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Email Body:" }),
@@ -1539,10 +1629,21 @@ function EmailTemplateManager({
                   {
                     className: "p-4 prose max-w-none",
                     dangerouslySetInnerHTML: {
-                      __html: selectedTemplate.html_body_template.replace(/\{\{(\w+)\}\}/g, (match2, key) => {
+                      __html: (() => {
                         const sampleData = generateSampleVariables(selectedTemplate.type);
-                        return sampleData[key] || match2;
-                      })
+                        let result = selectedTemplate.html_body_template;
+                        result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
+                          const value = sampleData[variableName];
+                          if (value && value !== "" && value !== "false" && value !== "0") {
+                            return content;
+                          }
+                          return "";
+                        });
+                        for (const [key, value] of Object.entries(sampleData)) {
+                          result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), String(value || ""));
+                        }
+                        return result;
+                      })()
                     }
                   }
                 ) })
@@ -4338,6 +4439,7 @@ export {
   NotificationSettings,
   RecentEmailNotifications,
   emailService,
+  gatherLessonCompletedVariables,
   useNotificationSettings,
   useNotifications
 };

@@ -66,13 +66,28 @@ export class EmailService {
     return `${base}${path}/#/lesson/${lessonId}`;
   }
 
-  // Template variable substitution
-  private substituteVariables(template: string, variables: Record<string, any>): string {
+  // Template variable substitution with Handlebars-like conditionals support
+  // Made public so it can be used in preview
+  public substituteVariables(template: string, variables: Record<string, any>): string {
     let result = template;
+    
+    // First, handle Handlebars conditionals {{#if variable}}...{{/if}}
+    // Remove blocks where the condition is false/undefined/null
+    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, variableName, content) => {
+      const value = variables[variableName];
+      // Show content if variable is truthy and not empty string
+      if (value && value !== '' && value !== 'false' && value !== '0') {
+        return content;
+      }
+      return ''; // Remove the block if condition is false
+    });
+    
+    // Then substitute all remaining variables
     for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{${key}}}`, 'g');
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
       result = result.replace(regex, String(value || ''));
     }
+    
     return result;
   }
 
@@ -478,3 +493,131 @@ export class EmailService {
 }
 
 export const emailService = EmailService.getInstance();
+
+/**
+ * Gathers real variables from the database for lesson completion notifications
+ * This is used when sending REAL notifications, not previews
+ */
+export async function gatherLessonCompletedVariables(
+  supabaseClient: any,
+  event: { 
+    user_id: string; 
+    lesson_id: string; 
+    learning_track_id?: string;
+    clientId?: string;
+  }
+): Promise<Record<string, any>> {
+  try {
+    // Get user info
+    const { data: user } = await supabaseClient
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', event.user_id)
+      .single();
+
+    // Get lesson info
+    const { data: lesson } = await supabaseClient
+      .from('lessons')
+      .select('title, description')
+      .eq('id', event.lesson_id)
+      .single();
+
+    // Get learning track info if available
+    let track = null;
+    let progress = null;
+    let lessonsCompleted = 0;
+    let totalLessons = 0;
+    let nextLesson = null;
+    
+    if (event.learning_track_id) {
+      track = await supabaseClient
+        .from('learning_tracks')
+        .select('title')
+        .eq('id', event.learning_track_id)
+        .single();
+
+      // Get progress in track
+      progress = await supabaseClient
+        .from('user_learning_track_progress')
+        .select('current_lesson_order')
+        .eq('user_id', event.user_id)
+        .eq('learning_track_id', event.learning_track_id)
+        .maybeSingle();
+
+      // Count lessons completed in this track
+      const { data: completedLessons } = await supabaseClient
+        .from('user_lesson_progress')
+        .select('lesson_id')
+        .eq('user_id', event.user_id)
+        .not('completed_at', 'is', null);
+
+      // Get total lessons in track
+      const { data: trackLessons } = await supabaseClient
+        .from('learning_track_lessons')
+        .select('lesson_id')
+        .eq('learning_track_id', event.learning_track_id);
+
+      totalLessons = trackLessons?.length || 0;
+      
+      // Count how many completed lessons are in this track
+      const completedInTrack = completedLessons?.filter((cl: any) => 
+        trackLessons?.some((tl: any) => tl.lesson_id === cl.lesson_id)
+      ).length || 0;
+      lessonsCompleted = completedInTrack;
+
+      // Get next lesson if available
+      const currentOrder = progress?.current_lesson_order || 0;
+      const { data: nextLessonData } = await supabaseClient
+        .from('learning_track_lessons')
+        .select('lesson_id, order_index, lessons(title)')
+        .eq('learning_track_id', event.learning_track_id)
+        .gt('order_index', currentOrder)
+        .order('order_index')
+        .limit(1)
+        .maybeSingle();
+
+      if (nextLessonData) {
+        nextLesson = {
+          title: (nextLessonData.lessons as any)?.title || 'Next Lesson',
+          id: nextLessonData.lesson_id
+        };
+      }
+    }
+
+    // Build client login URL
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://staysecure-learn.raynsecure.com';
+    const clientId = event.clientId || 'default';
+    const clientPath = clientId !== 'default' ? `/${clientId}` : '';
+    const clientLoginUrl = `${origin}${clientPath}/login`;
+
+    // Calculate progress percentage
+    const trackProgressPercentage = totalLessons > 0 
+      ? Math.round((lessonsCompleted / totalLessons) * 100)
+      : 0;
+
+    return {
+      user_name: user?.full_name || 'User',
+      user_email: user?.email || '',
+      lesson_title: lesson?.title || 'Lesson',
+      lesson_description: lesson?.description || '',
+      learning_track_title: track?.title || '',
+      completion_date: new Date().toLocaleDateString('en-US'),
+      completion_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      lessons_completed_in_track: lessonsCompleted,
+      total_lessons_in_track: totalLessons,
+      track_progress_percentage: trackProgressPercentage,
+      next_lesson_title: nextLesson?.title || null,
+      next_lesson_available: !!nextLesson,
+      next_lesson_url: clientLoginUrl, // Always use login URL as per requirement
+      client_login_url: clientLoginUrl
+    };
+  } catch (error) {
+    console.error('Error gathering lesson completed variables:', error);
+    // Return minimal fallback
+    return {
+      user_name: 'User',
+      lesson_title: 'Lesson',
+      client_login_url: 'https://staysecure-learn.raynsecure.com/login'
+    };
+  }
+}

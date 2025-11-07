@@ -324,9 +324,22 @@ export default function EmailTemplateManager({
     }
   };
 
+  /**
+   * Generates SAMPLE/DUMMY variables for preview and test emails only.
+   * For REAL notifications, use gatherLessonCompletedVariables() from emailService.ts
+   * which queries the database for actual user/lesson/track data.
+   */
   const generateSampleVariables = (templateType: string) => {
     // Use dynamic origin for lesson URLs to work across all client instances
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+    
+    // Extract client path from URL (e.g., /rayn from /rayn/admin)
+    const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean) : [];
+    const clientId = pathParts[0] || 'default';
+    const clientPath = clientId !== 'default' ? `/${clientId}` : '';
+    
+    // Construct client login URL
+    const clientLoginUrl = `${origin}${clientPath}/login`;
     
     const baseVariables = {
       user_name: 'John Doe',
@@ -342,7 +355,8 @@ export default function EmailTemplateManager({
         day: 'numeric' 
       }),
       reminder_type: 'Available Now',
-      lesson_url: `${origin}/#/lesson/sample-lesson-id`
+      lesson_url: `${origin}${clientPath}/#/lesson/sample-lesson-id`,
+      client_login_url: clientLoginUrl
     };
 
     switch (templateType) {
@@ -354,7 +368,8 @@ export default function EmailTemplateManager({
           track_progress_percentage: 50,
           next_lesson_title: 'Advanced Security Concepts',
           next_lesson_available: true,
-          next_lesson_url: 'http://localhost:8080/#/lesson/next-lesson-id'
+          next_lesson_url: clientLoginUrl, // Use client_login_url instead of hardcoded localhost
+          client_login_url: clientLoginUrl
         };
       case 'track_milestone_50':
         return {
@@ -363,7 +378,8 @@ export default function EmailTemplateManager({
           lessons_completed: 5,
           total_lessons: 10,
           time_spent_hours: 12,
-          continue_learning_url: 'http://localhost:8080/#/dashboard'
+          continue_learning_url: clientLoginUrl,
+          client_login_url: clientLoginUrl
         };
       case 'quiz_high_score':
         return {
@@ -372,14 +388,16 @@ export default function EmailTemplateManager({
           score: 95,
           correct_answers: 19,
           total_questions: 20,
-          view_results_url: 'http://localhost:8080/#/quiz/results',
-          continue_learning_url: 'http://localhost:8080/#/dashboard'
+          view_results_url: clientLoginUrl,
+          continue_learning_url: clientLoginUrl,
+          client_login_url: clientLoginUrl
         };
       case 'lesson_reminder':
         return {
           ...baseVariables,
           lesson_description: 'Learn the basics of cybersecurity and how to protect digital assets.',
-          reminder_type: 'Available Now'
+          reminder_type: 'Available Now',
+          client_login_url: clientLoginUrl
         };
       default:
         return baseVariables;
@@ -649,10 +667,27 @@ export default function EmailTemplateManager({
                     <div>
                       <Label className="text-sm font-medium text-gray-600">Subject:</Label>
                       <div className="mt-1 p-2 bg-gray-50 rounded border">
-                        {selectedTemplate.subject_template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-                          const sampleData = generateSampleVariables(selectedTemplate.type);
-                          return sampleData[key] || match;
-                        })}
+                        {(() => {
+                          const sampleData: Record<string, any> = generateSampleVariables(selectedTemplate.type);
+                          // Process template with Handlebars conditionals and variable substitution
+                          let result = selectedTemplate.subject_template;
+                          
+                          // Handle Handlebars conditionals {{#if variable}}...{{/if}}
+                          result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
+                            const value = sampleData[variableName];
+                            if (value && value !== '' && value !== 'false' && value !== '0') {
+                              return content;
+                            }
+                            return '';
+                          });
+                          
+                          // Substitute variables
+                          for (const [key, value] of Object.entries(sampleData)) {
+                            result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value || ''));
+                          }
+                          
+                          return result;
+                        })()}
                       </div>
                     </div>
                     
@@ -662,10 +697,27 @@ export default function EmailTemplateManager({
                         <div 
                           className="p-4 prose max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: selectedTemplate.html_body_template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-                              const sampleData = generateSampleVariables(selectedTemplate.type);
-                              return sampleData[key] || match;
-                            })
+                            __html: (() => {
+                              const sampleData: Record<string, any> = generateSampleVariables(selectedTemplate.type);
+                              // Process template with Handlebars conditionals and variable substitution
+                              let result = selectedTemplate.html_body_template;
+                              
+                              // Handle Handlebars conditionals {{#if variable}}...{{/if}}
+                              result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
+                                const value = sampleData[variableName];
+                                if (value && value !== '' && value !== 'false' && value !== '0') {
+                                  return content;
+                                }
+                                return '';
+                              });
+                              
+                              // Substitute variables
+                              for (const [key, value] of Object.entries(sampleData)) {
+                                result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value || ''));
+                              }
+                              
+                              return result;
+                            })()
                           }}
                         />
                       </div>
