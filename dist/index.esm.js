@@ -416,7 +416,7 @@ const _EmailService = class _EmailService {
   // Made public so it can be used in preview
   substituteVariables(template, variables) {
     let result = template;
-    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match2, variableName, content) => {
+    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
       const value = variables[variableName];
       if (value && value !== "" && value !== "false" && value !== "0") {
         return content;
@@ -444,8 +444,23 @@ const _EmailService = class _EmailService {
     }
   }
   // Send email using template from database
-  async sendEmailFromTemplate(type, to, variables, supabaseClient) {
+  async sendEmailFromTemplate(type, to, variables, supabaseClient, options = {}) {
     try {
+      const { userId, respectPreferences = true } = options;
+      if (respectPreferences && userId && supabaseClient) {
+        const preferenceCheck = await this.checkEmailPreferences(
+          supabaseClient,
+          userId,
+          type
+        );
+        if (!preferenceCheck.allow) {
+          return {
+            success: false,
+            skipped: true,
+            skipReason: preferenceCheck.reason || "preference_blocked"
+          };
+        }
+      }
       const template = await this.fetchTemplate(type, supabaseClient);
       if (!template) {
         return {
@@ -475,86 +490,63 @@ const _EmailService = class _EmailService {
   }
   async sendEmail(emailData, supabaseClient, notificationId) {
     try {
-      if (supabaseClient) {
-        const { data, error } = await supabaseClient.functions.invoke("send-email", {
-          body: {
-            to: emailData.to,
-            subject: emailData.subject,
-            html: emailData.htmlBody
-            // Note: Edge Function expects 'html', not 'htmlBody'
-          }
-        });
-        if (error) {
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, error.message || "Failed to send email");
-          }
-          return {
-            success: false,
-            error: error.message || "Failed to send email"
-          };
-        }
-        if (data && data.success) {
-          if (notificationId && supabaseClient) {
-            await new Promise((resolve) => setTimeout(resolve, 2e3));
-            await this.updateNotificationStatus(supabaseClient, notificationId, "sent", data.messageId);
-          }
-          return {
-            success: true,
-            messageId: data.messageId
-          };
-        } else {
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, (data == null ? void 0 : data.error) || "Failed to send email");
-          }
-          return {
-            success: false,
-            error: (data == null ? void 0 : data.error) || "Failed to send email"
-          };
-        }
-      } else {
-        const supabaseUrl = typeof window !== "undefined" && window.VITE_SUPABASE_URL || "https://ufvingocbzegpgjknzhm.supabase.co";
-        const supabaseKey = typeof window !== "undefined" && window.VITE_SUPABASE_ANON_KEY;
-        if (!supabaseKey) {
-          return {
-            success: false,
-            error: "Supabase client not provided and VITE_SUPABASE_ANON_KEY not configured"
-          };
-        }
-        const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseKey}`
-          },
-          body: JSON.stringify({
-            to: emailData.to,
-            subject: emailData.subject,
-            html: emailData.htmlBody
-          })
-        });
-        const result = await response.json();
-        if (response.ok && result.success) {
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, "sent", result.messageId);
-          }
-          return {
-            success: true,
-            messageId: result.messageId
-          };
-        } else {
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, result.error || "Failed to send email");
-          }
-          return {
-            success: false,
-            error: result.error || "Failed to send email"
-          };
-        }
+      const url = this.lambdaUrl;
+      if (!url) {
+        throw new Error("EmailService.lambdaUrl not configured. Call EmailService.configure first.");
       }
-    } catch (error) {
-      console.error("Error sending email:", error);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          to: emailData.to,
+          subject: emailData.subject,
+          html: emailData.htmlBody,
+          text: emailData.textBody,
+          from: emailData.from || this.defaultFrom
+        })
+      });
+      const result = await response.json();
+      const messageId = typeof (result == null ? void 0 : result.messageId) === "string" && result.messageId.length > 0 ? result.messageId : void 0;
+      if (!response.ok || !result.success) {
+        const errorMessage = (result == null ? void 0 : result.error) || "Failed to send email via Lambda";
+        if (notificationId && supabaseClient) {
+          await this.updateNotificationStatus(
+            supabaseClient,
+            notificationId,
+            "failed",
+            void 0,
+            errorMessage
+          );
+        }
+        return {
+          success: false,
+          error: errorMessage
+        };
+      }
       if (notificationId && supabaseClient) {
-        await this.updateNotificationStatus(supabaseClient, notificationId, "failed", void 0, error.message || "Failed to send email");
+        await this.updateNotificationStatus(
+          supabaseClient,
+          notificationId,
+          "sent",
+          messageId
+        );
+      }
+      return {
+        success: true,
+        messageId
+      };
+    } catch (error) {
+      console.error("Error sending email via Lambda:", error);
+      if (notificationId && supabaseClient) {
+        await this.updateNotificationStatus(
+          supabaseClient,
+          notificationId,
+          "failed",
+          void 0,
+          error.message || "Failed to send email"
+        );
       }
       return {
         success: false,
@@ -562,137 +554,8 @@ const _EmailService = class _EmailService {
       };
     }
   }
-  // Template for lesson reminder emails
-  async sendLessonReminder(to, lessonTitle, scheduledTime, supabaseClient, additionalVariables) {
-    if (supabaseClient) {
-      const variables = {
-        lesson_title: lessonTitle,
-        scheduled_time: scheduledTime,
-        ...additionalVariables
-      };
-      const result = await this.sendEmailFromTemplate(
-        "lesson_reminder",
-        to,
-        variables,
-        supabaseClient
-      );
-      if (result.success || result.error !== `No active template found for type: lesson_reminder`) {
-        return result;
-      }
-    }
-    const subject = `Reminder: ${lessonTitle} starts soon`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Lesson Reminder</h2>
-        <p>Hello!</p>
-        <p>This is a friendly reminder that your lesson <strong>${lessonTitle}</strong> is scheduled to start at <strong>${scheduledTime}</strong>.</p>
-        <p>Please make sure you're ready to begin your cybersecurity training session.</p>
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Lesson Details:</h3>
-          <p><strong>Title:</strong> ${lessonTitle}</p>
-          <p><strong>Time:</strong> ${scheduledTime}</p>
-        </div>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody
-    }, supabaseClient);
-  }
-  // Template for task due date reminders
-  async sendTaskDueReminder(to, taskName, dueDate, supabaseClient) {
-    const subject = `Reminder: ${taskName} is due soon`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc2626;">Task Due Reminder</h2>
-        <p>Hello!</p>
-        <p>This is a reminder that your task <strong>${taskName}</strong> is due on <strong>${dueDate}</strong>.</p>
-        <p>Please complete this task to stay on track with your cybersecurity training.</p>
-        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
-          <h3 style="margin-top: 0; color: #dc2626;">Task Details:</h3>
-          <p><strong>Task:</strong> ${taskName}</p>
-          <p><strong>Due Date:</strong> ${dueDate}</p>
-        </div>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody
-    }, supabaseClient);
-  }
-  // Template for achievement emails
-  async sendAchievementEmail(to, achievementTitle, achievementDescription, supabaseClient) {
-    const subject = `Congratulations! You've earned: ${achievementTitle}`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #059669;">🎉 Achievement Unlocked!</h2>
-        <p>Congratulations!</p>
-        <p>You've successfully earned the achievement: <strong>${achievementTitle}</strong></p>
-        <div style="background-color: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669;">
-          <h3 style="margin-top: 0; color: #059669;">Achievement Details:</h3>
-          <p><strong>Title:</strong> ${achievementTitle}</p>
-          <p><strong>Description:</strong> ${achievementDescription}</p>
-        </div>
-        <p>Keep up the great work in your cybersecurity journey!</p>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody
-    }, supabaseClient);
-  }
-  // Template for course completion emails
-  async sendCourseCompletionEmail(to, courseName, supabaseClient) {
-    const subject = `Congratulations! You've completed ${courseName}`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #7c3aed;">🎓 Course Completed!</h2>
-        <p>Congratulations on completing your course!</p>
-        <p>You've successfully finished: <strong>${courseName}</strong></p>
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-          <h3 style="margin-top: 0; color: #7c3aed;">Course Details:</h3>
-          <p><strong>Course:</strong> ${courseName}</p>
-          <p><strong>Status:</strong> ✅ Completed</p>
-        </div>
-        <p>You're now one step closer to becoming a cybersecurity expert!</p>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody
-    }, supabaseClient);
-  }
-  // Template for system alert emails
-  async sendSystemAlert(to, alertTitle, alertMessage, supabaseClient) {
-    const subject = `System Alert: ${alertTitle}`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ea580c;">⚠️ System Alert</h2>
-        <p>Hello!</p>
-        <p>This is an important system alert regarding: <strong>${alertTitle}</strong></p>
-        <div style="background-color: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ea580c;">
-          <h3 style="margin-top: 0; color: #ea580c;">Alert Details:</h3>
-          <p><strong>Title:</strong> ${alertTitle}</p>
-          <p><strong>Message:</strong> ${alertMessage}</p>
-        </div>
-        <p>Please take note of this information.</p>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody
-    }, supabaseClient);
-  }
+  // Deprecated legacy helpers removed: sendLessonReminder, sendTaskDueReminder, sendAchievementEmail,
+  // sendCourseCompletionEmail, sendSystemAlert. Use templates + sendEmailFromTemplate instead.
   // Send email using provided template data directly (for testing)
   async sendEmailWithTemplate(subjectTemplate, htmlBodyTemplate, textBodyTemplate, to, variables, supabaseClient, notificationId) {
     try {
@@ -722,6 +585,9 @@ const _EmailService = class _EmailService {
       if (status === "sent") {
         updateData.sent_at = (/* @__PURE__ */ new Date()).toISOString();
       }
+      if (messageId) {
+        updateData.message_id = messageId;
+      }
       if (errorMessage) {
         updateData.error_message = errorMessage;
       }
@@ -736,6 +602,59 @@ const _EmailService = class _EmailService {
       }
     } catch (error) {
       console.error("Error updating notification status:", error);
+    }
+  }
+  async checkEmailPreferences(supabaseClient, userId, notificationType) {
+    try {
+      const { data, error } = await supabaseClient.from("notification_preferences").select("email_enabled, types, quiet_hours").eq("user_id", userId).maybeSingle();
+      if (error) {
+        console.error("Failed to load notification preferences:", error);
+        return { allow: true };
+      }
+      if (!data) {
+        return { allow: true };
+      }
+      const emailEnabled = data.email_enabled ?? true;
+      if (!emailEnabled) {
+        return { allow: false, reason: "email_disabled" };
+      }
+      const typePreferences = data.types || {};
+      const normalizedType = notificationType ?? "";
+      const typeConfig = typePreferences[normalizedType] || typePreferences[normalizedType.toLowerCase()];
+      if (typeConfig && typeConfig.email === false) {
+        return { allow: false, reason: "type_email_disabled" };
+      }
+      const quietHours = data.quiet_hours;
+      if (quietHours == null ? void 0 : quietHours.enabled) {
+        const timezone = quietHours.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const now = /* @__PURE__ */ new Date();
+        const userTime = new Date(
+          now.toLocaleString("en-US", { timeZone: timezone })
+        );
+        const currentMinutes = userTime.getHours() * 60 + userTime.getMinutes();
+        const parseTime = (value) => {
+          if (!value) return null;
+          const [hourStr, minuteStr] = value.split(":");
+          const hour = parseInt(hourStr, 10);
+          const minute = parseInt(minuteStr, 10);
+          if (Number.isNaN(hour) || Number.isNaN(minute)) {
+            return null;
+          }
+          return hour * 60 + minute;
+        };
+        const start = parseTime(quietHours.startTime);
+        const end = parseTime(quietHours.endTime);
+        if (start !== null && end !== null) {
+          const inQuietHours = start <= end ? currentMinutes >= start && currentMinutes < end : currentMinutes >= start || currentMinutes < end;
+          if (inQuietHours) {
+            return { allow: false, reason: "quiet_hours" };
+          }
+        }
+      }
+      return { allow: true };
+    } catch (error) {
+      console.error("Error checking notification preferences:", error);
+      return { allow: true };
     }
   }
 };
@@ -966,6 +885,100 @@ const EmailNotifications = ({
       ] }),
       (preferences == null ? void 0 : preferences.emailEnabled) && /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsx("h4", { className: "font-medium", children: "Notification Types" }),
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+          /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Achievements" }),
+          /* @__PURE__ */ jsx(
+            Switch,
+            {
+              checked: (preferences == null ? void 0 : preferences.achievements) || false,
+              onCheckedChange: (checked) => updatePreferences({ achievements: checked })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+          /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Course Completions" }),
+          /* @__PURE__ */ jsx(
+            Switch,
+            {
+              checked: (preferences == null ? void 0 : preferences.courseCompletions) || false,
+              onCheckedChange: (checked) => updatePreferences({ courseCompletions: checked })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+            /* @__PURE__ */ jsx(Label, { className: "text-left font-medium", children: "Lesson Reminders" }),
+            /* @__PURE__ */ jsx(
+              Switch,
+              {
+                checked: (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0,
+                onCheckedChange: (checked) => {
+                  updatePreferences({
+                    reminderDaysBefore: checked ? 1 : -1
+                    // -1 means disabled
+                  });
+                }
+              }
+            )
+          ] }),
+          (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0 && /* @__PURE__ */ jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx(Label, { htmlFor: "reminder-days", className: "text-sm", children: "Days before lesson" }),
+              /* @__PURE__ */ jsx(
+                Input,
+                {
+                  id: "reminder-days",
+                  type: "number",
+                  min: "0",
+                  max: "7",
+                  value: (preferences == null ? void 0 : preferences.reminderDaysBefore) || 0,
+                  onChange: (e) => updatePreferences({ reminderDaysBefore: parseInt(e.target.value) || 0 }),
+                  className: "mt-1"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx(Label, { htmlFor: "reminder-time", className: "text-sm", children: "Send at time" }),
+              /* @__PURE__ */ jsx(
+                Input,
+                {
+                  id: "reminder-time",
+                  type: "time",
+                  value: (preferences == null ? void 0 : preferences.reminderTime) || "09:00",
+                  onChange: (e) => updatePreferences({ reminderTime: e.target.value }),
+                  className: "mt-1"
+                }
+              )
+            ] })
+          ] }) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
+            /* @__PURE__ */ jsx(Label, { className: "text-left font-medium", children: "Upcoming Lessons" }),
+            /* @__PURE__ */ jsx(
+              Switch,
+              {
+                checked: (preferences == null ? void 0 : preferences.includeUpcomingLessons) || false,
+                onCheckedChange: (checked) => updatePreferences({ includeUpcomingLessons: checked })
+              }
+            )
+          ] }),
+          (preferences == null ? void 0 : preferences.includeUpcomingLessons) && /* @__PURE__ */ jsx("div", { className: "pl-4 border-l-2 border-green-200", children: /* @__PURE__ */ jsxs("div", { children: [
+            /* @__PURE__ */ jsx(Label, { htmlFor: "upcoming-days", className: "text-sm", children: "Look ahead days" }),
+            /* @__PURE__ */ jsx(
+              Input,
+              {
+                id: "upcoming-days",
+                type: "number",
+                min: "1",
+                max: "14",
+                value: (preferences == null ? void 0 : preferences.upcomingDaysAhead) || 3,
+                onChange: (e) => updatePreferences({ upcomingDaysAhead: parseInt(e.target.value) || 3 }),
+                className: "mt-1"
+              }
+            )
+          ] }) })
+        ] }),
         /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
             /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Task Due Dates" }),
@@ -986,100 +999,6 @@ const EmailNotifications = ({
                 onCheckedChange: (checked) => updatePreferences({ systemAlerts: checked })
               }
             )
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Achievements" }),
-            /* @__PURE__ */ jsx(
-              Switch,
-              {
-                checked: (preferences == null ? void 0 : preferences.achievements) || false,
-                onCheckedChange: (checked) => updatePreferences({ achievements: checked })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Course Completions" }),
-            /* @__PURE__ */ jsx(
-              Switch,
-              {
-                checked: (preferences == null ? void 0 : preferences.courseCompletions) || false,
-                onCheckedChange: (checked) => updatePreferences({ courseCompletions: checked })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsx(Label, { className: "text-left font-medium", children: "Lesson Reminders" }),
-              /* @__PURE__ */ jsx(
-                Switch,
-                {
-                  checked: (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0,
-                  onCheckedChange: (checked) => {
-                    updatePreferences({
-                      reminderDaysBefore: checked ? 1 : -1
-                      // -1 means disabled
-                    });
-                  }
-                }
-              )
-            ] }),
-            (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0 && /* @__PURE__ */ jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Label, { htmlFor: "reminder-days", className: "text-sm", children: "Days before lesson" }),
-                /* @__PURE__ */ jsx(
-                  Input,
-                  {
-                    id: "reminder-days",
-                    type: "number",
-                    min: "0",
-                    max: "7",
-                    value: (preferences == null ? void 0 : preferences.reminderDaysBefore) || 0,
-                    onChange: (e) => updatePreferences({ reminderDaysBefore: parseInt(e.target.value) || 0 }),
-                    className: "mt-1"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxs("div", { children: [
-                /* @__PURE__ */ jsx(Label, { htmlFor: "reminder-time", className: "text-sm", children: "Send at time" }),
-                /* @__PURE__ */ jsx(
-                  Input,
-                  {
-                    id: "reminder-time",
-                    type: "time",
-                    value: (preferences == null ? void 0 : preferences.reminderTime) || "09:00",
-                    onChange: (e) => updatePreferences({ reminderTime: e.target.value }),
-                    className: "mt-1"
-                  }
-                )
-              ] })
-            ] }) })
-          ] }),
-          /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
-            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsx(Label, { className: "text-left font-medium", children: "Upcoming Lessons" }),
-              /* @__PURE__ */ jsx(
-                Switch,
-                {
-                  checked: (preferences == null ? void 0 : preferences.includeUpcomingLessons) || false,
-                  onCheckedChange: (checked) => updatePreferences({ includeUpcomingLessons: checked })
-                }
-              )
-            ] }),
-            (preferences == null ? void 0 : preferences.includeUpcomingLessons) && /* @__PURE__ */ jsx("div", { className: "pl-4 border-l-2 border-green-200", children: /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx(Label, { htmlFor: "upcoming-days", className: "text-sm", children: "Look ahead days" }),
-              /* @__PURE__ */ jsx(
-                Input,
-                {
-                  id: "upcoming-days",
-                  type: "number",
-                  min: "1",
-                  max: "14",
-                  value: (preferences == null ? void 0 : preferences.upcomingDaysAhead) || 3,
-                  onChange: (e) => updatePreferences({ upcomingDaysAhead: parseInt(e.target.value) || 3 }),
-                  className: "mt-1"
-                }
-              )
-            ] }) })
           ] })
         ] })
       ] }),

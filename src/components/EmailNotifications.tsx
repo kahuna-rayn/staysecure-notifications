@@ -362,23 +362,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
             <div className="space-y-4">
               <h4 className="font-medium">Notification Types</h4>
               
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-left">Task Due Dates</Label>
-                  <Switch
-                    checked={preferences?.taskDueDates || false}
-                    onCheckedChange={(checked) => updatePreferences({ taskDueDates: checked })}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label className="text-left">System Alerts</Label>
-                  <Switch
-                    checked={preferences?.systemAlerts || false}
-                    onCheckedChange={(checked) => updatePreferences({ systemAlerts: checked })}
-                  />
-                </div>
-                
                 <div className="flex items-center justify-between">
                   <Label className="text-left">Achievements</Label>
                   <Switch
@@ -466,7 +449,25 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                     </div>
                   )}
                 </div>
-
+                
+                {/* Task Due Dates and System Alerts */}
+                <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-left">Task Due Dates</Label>
+                  <Switch
+                    checked={preferences?.taskDueDates || false}
+                    onCheckedChange={(checked) => updatePreferences({ taskDueDates: checked })}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <Label className="text-left">System Alerts</Label>
+                  <Switch
+                    checked={preferences?.systemAlerts || false}
+                    onCheckedChange={(checked) => updatePreferences({ systemAlerts: checked })}
+                  />
+                </div>
+                
               </div>
             </div>
           )}

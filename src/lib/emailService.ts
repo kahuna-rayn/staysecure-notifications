@@ -7,6 +7,14 @@ export interface EmailData {
   from?: string;
 }
 
+export interface SendEmailResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  skipped?: boolean;
+  skipReason?: string;
+}
+
 export interface EmailTemplate {
   id: string;
   name: string;
@@ -73,7 +81,7 @@ export class EmailService {
     
     // First, handle Handlebars conditionals {{#if variable}}...{{/if}}
     // Remove blocks where the condition is false/undefined/null
-    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, variableName, content) => {
+    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
       const value = variables[variableName];
       // Show content if variable is truthy and not empty string
       if (value && value !== '' && value !== 'false' && value !== '0') {
@@ -123,9 +131,31 @@ export class EmailService {
     type: string,
     to: string,
     variables: Record<string, any>,
-    supabaseClient: any
-  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    supabaseClient?: any,
+    options: {
+      userId?: string;
+      respectPreferences?: boolean;
+    } = {}
+  ): Promise<SendEmailResult> {
     try {
+      const { userId, respectPreferences = true } = options;
+
+      if (respectPreferences && userId && supabaseClient) {
+        const preferenceCheck = await this.checkEmailPreferences(
+          supabaseClient,
+          userId,
+          type
+        );
+
+        if (!preferenceCheck.allow) {
+          return {
+            success: false,
+            skipped: true,
+            skipReason: preferenceCheck.reason || 'preference_blocked',
+          };
+        }
+      }
+
       // Fetch template from database
       const template = await this.fetchTemplate(type, supabaseClient);
 
@@ -162,103 +192,77 @@ export class EmailService {
     }
   }
 
-  async sendEmail(emailData: EmailData, supabaseClient?: any, notificationId?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    // NEW METHOD: Use Supabase Edge Function instead of direct Lambda call
+  async sendEmail(
+    emailData: EmailData,
+    supabaseClient?: any,
+    notificationId?: string
+  ): Promise<SendEmailResult> {
     try {
-      // Use provided supabase client or fallback to direct fetch
-      if (supabaseClient) {
-        const { data, error } = await supabaseClient.functions.invoke('send-email', {
-          body: {
-            to: emailData.to,
-            subject: emailData.subject,
-            html: emailData.htmlBody, // Note: Edge Function expects 'html', not 'htmlBody'
-          }
-        });
-
-        if (error) {
-          // Update notification status to 'failed' if notificationId provided
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, error.message || 'Failed to send email');
-          }
-          return {
-            success: false,
-            error: error.message || 'Failed to send email',
-          };
-        }
-
-        if (data && data.success) {
-          // Update notification status to 'sent' if notificationId provided
-          if (notificationId && supabaseClient) {
-            // Add small delay for testing visibility
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            await this.updateNotificationStatus(supabaseClient, notificationId, 'sent', data.messageId);
-          }
-          return {
-            success: true,
-            messageId: data.messageId,
-          };
-        } else {
-          // Update notification status to 'failed' if notificationId provided
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, data?.error || 'Failed to send email');
-          }
-          return {
-            success: false,
-            error: data?.error || 'Failed to send email',
-          };
-        }
-      } else {
-        // Fallback to direct fetch if no supabase client provided
-        const supabaseUrl = (typeof window !== 'undefined' && (window as any).VITE_SUPABASE_URL) || 'https://ufvingocbzegpgjknzhm.supabase.co';
-        const supabaseKey = (typeof window !== 'undefined' && (window as any).VITE_SUPABASE_ANON_KEY);
-        
-        if (!supabaseKey) {
-          return {
-            success: false,
-            error: 'Supabase client not provided and VITE_SUPABASE_ANON_KEY not configured',
-          };
-        }
-
-        const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            to: emailData.to,
-            subject: emailData.subject,
-            html: emailData.htmlBody,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-          // Update notification status to 'sent' if notificationId provided
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, 'sent', result.messageId);
-          }
-          return {
-            success: true,
-            messageId: result.messageId,
-          };
-        } else {
-          // Update notification status to 'failed' if notificationId provided
-          if (notificationId && supabaseClient) {
-            await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, result.error || 'Failed to send email');
-          }
-          return {
-            success: false,
-            error: result.error || 'Failed to send email',
-          };
-        }
+      const url = this.lambdaUrl;
+      if (!url) {
+        throw new Error('EmailService.lambdaUrl not configured. Call EmailService.configure first.');
       }
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      // Update notification status to 'failed' if notificationId provided
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: emailData.to,
+          subject: emailData.subject,
+          html: emailData.htmlBody,
+          text: emailData.textBody,
+          from: emailData.from || this.defaultFrom,
+        }),
+      });
+
+      const result = await response.json();
+      const messageId =
+        typeof result?.messageId === 'string' && result.messageId.length > 0
+          ? result.messageId
+          : undefined;
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result?.error || 'Failed to send email via Lambda';
+        if (notificationId && supabaseClient) {
+          await this.updateNotificationStatus(
+            supabaseClient,
+            notificationId,
+            'failed',
+            undefined,
+            errorMessage
+          );
+        }
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
       if (notificationId && supabaseClient) {
-        await this.updateNotificationStatus(supabaseClient, notificationId, 'failed', undefined, error.message || 'Failed to send email');
+        await this.updateNotificationStatus(
+          supabaseClient,
+          notificationId,
+          'sent',
+          messageId
+        );
+      }
+
+      return {
+        success: true,
+        messageId,
+      };
+    } catch (error: any) {
+      console.error('Error sending email via Lambda:', error);
+      if (notificationId && supabaseClient) {
+        await this.updateNotificationStatus(
+          supabaseClient,
+          notificationId,
+          'failed',
+          undefined,
+          error.message || 'Failed to send email'
+        );
       }
       return {
         success: false,
@@ -267,158 +271,8 @@ export class EmailService {
     }
   }
 
-  // Template for lesson reminder emails
-  async sendLessonReminder(
-    to: string,
-    lessonTitle: string,
-    scheduledTime: string,
-    supabaseClient?: any,
-    additionalVariables?: Record<string, any>
-  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    // Try to use database template first
-    if (supabaseClient) {
-      const variables = {
-        lesson_title: lessonTitle,
-        scheduled_time: scheduledTime,
-        ...additionalVariables,
-      };
-
-      const result = await this.sendEmailFromTemplate(
-        'lesson_reminder',
-        to,
-        variables,
-        supabaseClient
-      );
-
-      // If template found and sent successfully, return
-      if (result.success || result.error !== `No active template found for type: lesson_reminder`) {
-        return result;
-      }
-    }
-
-    // Fallback to hardcoded template if no database template exists
-    const subject = `Reminder: ${lessonTitle} starts soon`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Lesson Reminder</h2>
-        <p>Hello!</p>
-        <p>This is a friendly reminder that your lesson <strong>${lessonTitle}</strong> is scheduled to start at <strong>${scheduledTime}</strong>.</p>
-        <p>Please make sure you're ready to begin your cybersecurity training session.</p>
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Lesson Details:</h3>
-          <p><strong>Title:</strong> ${lessonTitle}</p>
-          <p><strong>Time:</strong> ${scheduledTime}</p>
-        </div>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody,
-    }, supabaseClient);
-  }
-
-  // Template for task due date reminders
-  async sendTaskDueReminder(to: string, taskName: string, dueDate: string, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const subject = `Reminder: ${taskName} is due soon`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc2626;">Task Due Reminder</h2>
-        <p>Hello!</p>
-        <p>This is a reminder that your task <strong>${taskName}</strong> is due on <strong>${dueDate}</strong>.</p>
-        <p>Please complete this task to stay on track with your cybersecurity training.</p>
-        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
-          <h3 style="margin-top: 0; color: #dc2626;">Task Details:</h3>
-          <p><strong>Task:</strong> ${taskName}</p>
-          <p><strong>Due Date:</strong> ${dueDate}</p>
-        </div>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody,
-    }, supabaseClient);
-  }
-
-  // Template for achievement emails
-  async sendAchievementEmail(to: string, achievementTitle: string, achievementDescription: string, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const subject = `Congratulations! You've earned: ${achievementTitle}`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #059669;">🎉 Achievement Unlocked!</h2>
-        <p>Congratulations!</p>
-        <p>You've successfully earned the achievement: <strong>${achievementTitle}</strong></p>
-        <div style="background-color: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669;">
-          <h3 style="margin-top: 0; color: #059669;">Achievement Details:</h3>
-          <p><strong>Title:</strong> ${achievementTitle}</p>
-          <p><strong>Description:</strong> ${achievementDescription}</p>
-        </div>
-        <p>Keep up the great work in your cybersecurity journey!</p>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody,
-    }, supabaseClient);
-  }
-
-  // Template for course completion emails
-  async sendCourseCompletionEmail(to: string, courseName: string, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const subject = `Congratulations! You've completed ${courseName}`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #7c3aed;">🎓 Course Completed!</h2>
-        <p>Congratulations on completing your course!</p>
-        <p>You've successfully finished: <strong>${courseName}</strong></p>
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #7c3aed;">
-          <h3 style="margin-top: 0; color: #7c3aed;">Course Details:</h3>
-          <p><strong>Course:</strong> ${courseName}</p>
-          <p><strong>Status:</strong> ✅ Completed</p>
-        </div>
-        <p>You're now one step closer to becoming a cybersecurity expert!</p>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody,
-    }, supabaseClient);
-  }
-
-  // Template for system alert emails
-  async sendSystemAlert(to: string, alertTitle: string, alertMessage: string, supabaseClient?: any): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const subject = `System Alert: ${alertTitle}`;
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ea580c;">⚠️ System Alert</h2>
-        <p>Hello!</p>
-        <p>This is an important system alert regarding: <strong>${alertTitle}</strong></p>
-        <div style="background-color: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ea580c;">
-          <h3 style="margin-top: 0; color: #ea580c;">Alert Details:</h3>
-          <p><strong>Title:</strong> ${alertTitle}</p>
-          <p><strong>Message:</strong> ${alertMessage}</p>
-        </div>
-        <p>Please take note of this information.</p>
-        <p>Best regards,<br>Your Cybersecurity Training Team</p>
-      </div>
-    `;
-
-    return this.sendEmail({
-      to,
-      subject,
-      htmlBody,
-    }, supabaseClient);
-  }
+  // Deprecated legacy helpers removed: sendLessonReminder, sendTaskDueReminder, sendAchievementEmail,
+  // sendCourseCompletionEmail, sendSystemAlert. Use templates + sendEmailFromTemplate instead.
 
   // Send email using provided template data directly (for testing)
   async sendEmailWithTemplate(
@@ -429,7 +283,7 @@ export class EmailService {
     variables: Record<string, any>,
     supabaseClient?: any,
     notificationId?: string
-  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  ): Promise<SendEmailResult> {
     try {
       // Substitute variables in templates
       const subject = this.substituteVariables(subjectTemplate, variables);
@@ -468,6 +322,10 @@ export class EmailService {
         updateData.sent_at = new Date().toISOString();
       }
 
+      if (messageId) {
+        updateData.message_id = messageId;
+      }
+
       if (errorMessage) {
         updateData.error_message = errorMessage;
       }
@@ -488,6 +346,98 @@ export class EmailService {
       }
     } catch (error) {
       console.error('Error updating notification status:', error);
+    }
+  }
+
+  private async checkEmailPreferences(
+    supabaseClient: any,
+    userId: string,
+    notificationType: string
+  ): Promise<{ allow: boolean; reason?: string }> {
+    try {
+      const { data, error } = await supabaseClient
+        .from('notification_preferences')
+        .select('email_enabled, types, quiet_hours')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to load notification preferences:', error);
+        return { allow: true };
+      }
+
+      if (!data) {
+        return { allow: true };
+      }
+
+      const emailEnabled = data.email_enabled ?? true;
+      if (!emailEnabled) {
+        return { allow: false, reason: 'email_disabled' };
+      }
+
+      const typePreferences = (data.types || {}) as Record<
+        string,
+        { email?: boolean }
+      >;
+
+      const normalizedType = notificationType ?? '';
+      const typeConfig =
+        typePreferences[normalizedType] ||
+        typePreferences[normalizedType.toLowerCase()];
+
+      if (typeConfig && typeConfig.email === false) {
+        return { allow: false, reason: 'type_email_disabled' };
+      }
+
+      const quietHours = data.quiet_hours as
+        | {
+            enabled?: boolean;
+            startTime?: string;
+            endTime?: string;
+            timezone?: string;
+          }
+        | undefined;
+
+      if (quietHours?.enabled) {
+        const timezone =
+          quietHours.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const now = new Date();
+        const userTime = new Date(
+          now.toLocaleString('en-US', { timeZone: timezone })
+        );
+        const currentMinutes =
+          userTime.getHours() * 60 + userTime.getMinutes();
+
+        const parseTime = (value?: string): number | null => {
+          if (!value) return null;
+          const [hourStr, minuteStr] = value.split(':');
+          const hour = parseInt(hourStr, 10);
+          const minute = parseInt(minuteStr, 10);
+          if (Number.isNaN(hour) || Number.isNaN(minute)) {
+            return null;
+          }
+          return hour * 60 + minute;
+        };
+
+        const start = parseTime(quietHours.startTime);
+        const end = parseTime(quietHours.endTime);
+
+        if (start !== null && end !== null) {
+          const inQuietHours =
+            start <= end
+              ? currentMinutes >= start && currentMinutes < end
+              : currentMinutes >= start || currentMinutes < end;
+
+          if (inQuietHours) {
+            return { allow: false, reason: 'quiet_hours' };
+          }
+        }
+      }
+
+      return { allow: true };
+    } catch (error) {
+      console.error('Error checking notification preferences:', error);
+      return { allow: true };
     }
   }
 }
