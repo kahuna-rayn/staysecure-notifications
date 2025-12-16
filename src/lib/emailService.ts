@@ -30,13 +30,13 @@ export interface EmailTemplate {
 
 export class EmailService {
   private static instance: EmailService;
-  private lambdaUrl: string;
   private defaultFrom: string;
   private baseUrl: string;
 
   private constructor() {
-    // This will be set by the consuming app
-    this.lambdaUrl = Deno.env.get('AUTH_LAMBDA_URL') ?? '';
+    // This will be set by the consuming app via configure() if needed
+    // We can't use Deno.env here as this runs in browser/Node.js, not Deno
+    // Note: We now use Supabase Edge Function, so lambdaUrl is not needed
     this.defaultFrom = 'kahuna@raynsecure.com';
     this.baseUrl = '';
   }
@@ -49,12 +49,10 @@ export class EmailService {
   }
 
   public static configure(config: {
-    lambdaUrl: string;
     fromEmail?: string;
     baseUrl?: string;
   }): void {
     const instance = EmailService.getInstance();
-    instance.lambdaUrl = config.lambdaUrl;
     if (config.fromEmail) {
       instance.defaultFrom = config.fromEmail;
     }

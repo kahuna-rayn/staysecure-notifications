@@ -379,10 +379,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   ]);
   const _EmailService = class _EmailService {
     constructor() {
-      __publicField(this, "lambdaUrl");
       __publicField(this, "defaultFrom");
       __publicField(this, "baseUrl");
-      this.lambdaUrl = Deno.env.get("AUTH_LAMBDA_URL") ?? "";
       this.defaultFrom = "kahuna@raynsecure.com";
       this.baseUrl = "";
     }
@@ -394,7 +392,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     static configure(config) {
       const instance = _EmailService.getInstance();
-      instance.lambdaUrl = config.lambdaUrl;
       if (config.fromEmail) {
         instance.defaultFrom = config.fromEmail;
       }
