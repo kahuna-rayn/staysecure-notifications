@@ -1,4 +1,5 @@
 // Email service using Lambda + SES for better security
+
 export interface EmailData {
   to: string;
   subject: string;
@@ -35,7 +36,7 @@ export class EmailService {
 
   private constructor() {
     // This will be set by the consuming app
-    this.lambdaUrl = '';
+    this.lambdaUrl = Deno.env.get('AUTH_LAMBDA_URL') ?? '';
     this.defaultFrom = 'kahuna@raynsecure.com';
     this.baseUrl = '';
   }
@@ -198,33 +199,23 @@ export class EmailService {
     notificationId?: string
   ): Promise<SendEmailResult> {
     try {
-      const url = this.lambdaUrl;
-      if (!url) {
-        throw new Error('EmailService.lambdaUrl not configured. Call EmailService.configure first.');
+      if (!supabaseClient) {
+        throw new Error('Supabase client is required to send email');
       }
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call Supabase Edge Function instead of Lambda directly
+      // The Edge Function will use AUTH_LAMBDA_URL from Supabase secrets
+      const { data, error } = await supabaseClient.functions.invoke('send-email', {
+        body: {
           to: emailData.to,
           subject: emailData.subject,
           html: emailData.htmlBody,
           text: emailData.textBody,
-          from: emailData.from || this.defaultFrom,
-        }),
+        },
       });
 
-      const result = await response.json();
-      const messageId =
-        typeof result?.messageId === 'string' && result.messageId.length > 0
-          ? result.messageId
-          : undefined;
-
-      if (!response.ok || !result.success) {
-        const errorMessage = result?.error || 'Failed to send email via Lambda';
+      if (error) {
+        const errorMessage = error.message || 'Failed to send email via Edge Function';
         if (notificationId && supabaseClient) {
           await this.updateNotificationStatus(
             supabaseClient,
@@ -240,6 +231,12 @@ export class EmailService {
         };
       }
 
+      // The Edge Function returns { success: true, message: '...' }
+      // Extract messageId if available (Edge Function may not return messageId currently)
+      const messageId = typeof data?.messageId === 'string' && data.messageId.length > 0
+        ? data.messageId
+        : undefined;
+
       if (notificationId && supabaseClient) {
         await this.updateNotificationStatus(
           supabaseClient,
@@ -254,7 +251,7 @@ export class EmailService {
         messageId,
       };
     } catch (error: any) {
-      console.error('Error sending email via Lambda:', error);
+      console.error('Error sending email via Edge Function:', error);
       if (notificationId && supabaseClient) {
         await this.updateNotificationStatus(
           supabaseClient,

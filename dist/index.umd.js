@@ -382,7 +382,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "lambdaUrl");
       __publicField(this, "defaultFrom");
       __publicField(this, "baseUrl");
-      this.lambdaUrl = "";
+      this.lambdaUrl = Deno.env.get("AUTH_LAMBDA_URL") ?? "";
       this.defaultFrom = "kahuna@raynsecure.com";
       this.baseUrl = "";
     }
@@ -490,27 +490,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     async sendEmail(emailData, supabaseClient, notificationId) {
       try {
-        const url = this.lambdaUrl;
-        if (!url) {
-          throw new Error("EmailService.lambdaUrl not configured. Call EmailService.configure first.");
+        if (!supabaseClient) {
+          throw new Error("Supabase client is required to send email");
         }
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
+        const { data, error } = await supabaseClient.functions.invoke("send-email", {
+          body: {
             to: emailData.to,
             subject: emailData.subject,
             html: emailData.htmlBody,
-            text: emailData.textBody,
-            from: emailData.from || this.defaultFrom
-          })
+            text: emailData.textBody
+          }
         });
-        const result = await response.json();
-        const messageId = typeof (result == null ? void 0 : result.messageId) === "string" && result.messageId.length > 0 ? result.messageId : void 0;
-        if (!response.ok || !result.success) {
-          const errorMessage = (result == null ? void 0 : result.error) || "Failed to send email via Lambda";
+        if (error) {
+          const errorMessage = error.message || "Failed to send email via Edge Function";
           if (notificationId && supabaseClient) {
             await this.updateNotificationStatus(
               supabaseClient,
@@ -525,6 +517,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             error: errorMessage
           };
         }
+        const messageId = typeof (data == null ? void 0 : data.messageId) === "string" && data.messageId.length > 0 ? data.messageId : void 0;
         if (notificationId && supabaseClient) {
           await this.updateNotificationStatus(
             supabaseClient,
@@ -538,7 +531,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           messageId
         };
       } catch (error) {
-        console.error("Error sending email via Lambda:", error);
+        console.error("Error sending email via Edge Function:", error);
         if (notificationId && supabaseClient) {
           await this.updateNotificationStatus(
             supabaseClient,
