@@ -1706,14 +1706,14 @@ function RecentEmailNotifications({
         return;
       }
       const userIds = [...new Set(notifications2.map((n) => n.user_id))];
-      const { data: profiles, error: profilesError } = await supabaseClient.from("profiles").select("id, email").in("id", userIds);
+      const { data: profiles, error: profilesError } = await supabaseClient.from("profiles").select("id, username").in("id", userIds);
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
       }
       const emailMap = /* @__PURE__ */ new Map();
       profiles == null ? void 0 : profiles.forEach((profile) => {
-        if (profile.email) {
-          emailMap.set(profile.id, profile.email);
+        if (profile.username) {
+          emailMap.set(profile.id, profile.username);
         }
       });
       const mappedData = notifications2.map((notification) => ({
