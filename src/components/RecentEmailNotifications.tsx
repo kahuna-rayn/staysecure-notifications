@@ -79,26 +79,52 @@ export default function RecentEmailNotifications({
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      // Get current user for email display
-      const { data: { user } } = await supabaseClient.auth.getUser();
 
-      const { data, error } = await supabaseClient
+      // Fetch notifications
+      const { data: notifications, error } = await supabaseClient
         .from('notification_history')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('sent_at', { ascending: false, nullsFirst: false })
         .limit(100); // Show last 100 notifications
 
       if (error) throw error;
+
+      if (!notifications || notifications.length === 0) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get unique user IDs
+      const userIds = [...new Set(notifications.map((n: any) => n.user_id))];
+
+      // Fetch user emails from profiles
+      const { data: profiles, error: profilesError } = await supabaseClient
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Create a map of user_id -> email
+      const emailMap = new Map<string, string>();
+      profiles?.forEach((profile: any) => {
+        if (profile.email) {
+          emailMap.set(profile.id, profile.email);
+        }
+      });
       
       // Map notification_history fields to the expected format
-      const mappedData = (data || []).map(notification => ({
+      const mappedData = notifications.map((notification: any) => ({
         id: notification.id,
-        title: notification.trigger_event.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        title: notification.trigger_event.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         message: `Notification of type ${notification.trigger_event}`,
         type: notification.trigger_event,
         status: notification.status,
-        email: user?.email || 'Unknown User',
-        sent_at: notification.sent_at || notification.created_at,
+        email: emailMap.get(notification.user_id) || 'Unknown User',
+        sent_at: notification.sent_at,
         error_message: notification.error_message
       }));
       
@@ -281,7 +307,7 @@ export default function RecentEmailNotifications({
             <Input
               placeholder="Search notifications..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -390,9 +416,9 @@ export default function RecentEmailNotifications({
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div className="text-sm">
                             {notification.sent_at ? (
-                              <div>{formatDate(notification.sent_at)}</div>
+                              formatDate(notification.sent_at)
                             ) : (
-                              <div>{formatDate(notification.created_at)}</div>
+                              <span className="text-muted-foreground">Not sent</span>
                             )}
                           </div>
                         </div>

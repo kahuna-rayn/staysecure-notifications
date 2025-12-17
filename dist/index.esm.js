@@ -1698,17 +1698,32 @@ function RecentEmailNotifications({
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      const { data, error: error2 } = await supabaseClient.from("notification_history").select("*").order("created_at", { ascending: false }).limit(100);
+      const { data: notifications2, error: error2 } = await supabaseClient.from("notification_history").select("*").order("sent_at", { ascending: false, nullsFirst: false }).limit(100);
       if (error2) throw error2;
-      const mappedData = (data || []).map((notification) => ({
+      if (!notifications2 || notifications2.length === 0) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
+      const userIds = [...new Set(notifications2.map((n) => n.user_id))];
+      const { data: profiles, error: profilesError } = await supabaseClient.from("profiles").select("id, email").in("id", userIds);
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+      }
+      const emailMap = /* @__PURE__ */ new Map();
+      profiles == null ? void 0 : profiles.forEach((profile) => {
+        if (profile.email) {
+          emailMap.set(profile.id, profile.email);
+        }
+      });
+      const mappedData = notifications2.map((notification) => ({
         id: notification.id,
         title: notification.trigger_event.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase()),
         message: `Notification of type ${notification.trigger_event}`,
         type: notification.trigger_event,
         status: notification.status,
-        email: (user == null ? void 0 : user.email) || "Unknown User",
-        sent_at: notification.sent_at || notification.created_at,
+        email: emailMap.get(notification.user_id) || "Unknown User",
+        sent_at: notification.sent_at,
         error_message: notification.error_message
       }));
       setNotifications(mappedData);
@@ -1922,7 +1937,7 @@ function RecentEmailNotifications({
         ] }) }),
         /* @__PURE__ */ jsx("td", { className: "p-4 text-left", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center space-x-2", children: [
           /* @__PURE__ */ jsx(Calendar, { className: "h-4 w-4 text-muted-foreground" }),
-          /* @__PURE__ */ jsx("div", { className: "text-sm", children: notification.sent_at ? /* @__PURE__ */ jsx("div", { children: formatDate(notification.sent_at) }) : /* @__PURE__ */ jsx("div", { children: formatDate(notification.created_at) }) })
+          /* @__PURE__ */ jsx("div", { className: "text-sm", children: notification.sent_at ? formatDate(notification.sent_at) : /* @__PURE__ */ jsx("span", { className: "text-muted-foreground", children: "Not sent" }) })
         ] }) })
       ] }, notification.id)) })
     ] }) }) }) })
