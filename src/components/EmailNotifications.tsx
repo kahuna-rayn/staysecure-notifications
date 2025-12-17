@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Send } from 'lucide-react';
-import { emailService, EmailService } from '../lib/emailService';
+import { Mail } from 'lucide-react';
+import { EmailService } from '../lib/emailService';
 
 // These should be passed as props or configured externally
 interface EmailNotificationsProps {
@@ -39,7 +39,7 @@ interface EmailPreferences {
   taskDueDates: boolean;
   systemAlerts: boolean;
   achievements: boolean;
-  courseCompletions: boolean;
+  trackCompletions: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -76,9 +76,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
 }) => {
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  // Removed unused state variables - now using consolidated preferences
-  const [testEmailType, setTestEmailType] = useState<string>('system_alert');
 
   // Configure email service with AWS config
   useEffect(() => {
@@ -115,7 +112,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           taskDueDates: data.task_due_dates,
           systemAlerts: data.system_alerts,
           achievements: data.achievements,
-          courseCompletions: data.course_completions,
+          trackCompletions: data.track_completions,
           quietHoursEnabled: data.quiet_hours_enabled,
           quietHoursStart: data.quiet_hours_start_time,
           quietHoursEnd: data.quiet_hours_end_time,
@@ -155,7 +152,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       task_due_dates: updatedPrefs.taskDueDates,
       system_alerts: updatedPrefs.systemAlerts,
       achievements: updatedPrefs.achievements,
-      course_completions: updatedPrefs.courseCompletions,
+      track_completions: updatedPrefs.trackCompletions,
       quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
       quiet_hours_start_time: updatedPrefs.quietHoursStart,
       quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -186,116 +183,6 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
   // saveReminderSettingsAuto removed - now uses updatePreferences directly
 
   // saveReminderSettings removed - now uses updatePreferences directly
-
-  const testReminders = async () => {
-    try {
-      setTestingReminders(true);
-
-      // Call the Edge Function to send test reminders
-      const { data, error } = await supabase.functions.invoke('send-lesson-reminders', {
-        body: {
-          test: true,
-          email: user?.email,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data && data.success) {
-        alert(`Test reminders sent successfully! Check your email at ${user?.email}`);
-      } else {
-        alert(`Test failed: ${data?.message || 'Unknown error'}`);
-      }
-    } catch (err: any) {
-      console.error('Error testing reminders:', err);
-      alert(`Failed to send test reminders: ${err.message}`);
-    } finally {
-      setTestingReminders(false);
-    }
-  };
-
-
-  const sendTestEmail = async () => {
-    if (!user || !user.email) {
-      return;
-    }
-
-    setSending(true);
-    try {
-      let emailResult;
-
-      // Send different types of test emails based on selection
-      switch (testEmailType) {
-        case 'lesson_reminder':
-          emailResult = await emailService.sendLessonReminder(
-            user.email,
-            'Introduction to Cybersecurity',
-            '2:00 PM today',
-            supabase
-          );
-          break;
-        case 'task_due':
-          emailResult = await emailService.sendTaskDueReminder(
-            user.email,
-            'Security Assessment Quiz',
-            'Tomorrow at 11:59 PM',
-            supabase
-          );
-          break;
-        case 'achievement':
-          emailResult = await emailService.sendAchievementEmail(
-            user.email,
-            'First Lesson Completed',
-            'You completed your first cybersecurity lesson!',
-            supabase
-          );
-          break;
-        case 'course_completion':
-          emailResult = await emailService.sendCourseCompletionEmail(
-            user.email,
-            'Cybersecurity Fundamentals',
-            supabase
-          );
-          break;
-        case 'system_alert':
-        default:
-          emailResult = await emailService.sendSystemAlert(
-            user.email,
-            'System Maintenance',
-            'Scheduled maintenance will occur tonight at 2 AM EST.',
-            supabase
-          );
-          break;
-      }
-
-      if (emailResult.success) {
-        // Save to database
-        const { error } = await supabase
-          .from('email_notifications')
-          .insert({
-            user_id: user.id,
-            type: testEmailType as any,
-            title: 'Test Email Notification',
-            message: `Test ${testEmailType} email sent successfully.`,
-            email: user.email,
-            status: 'sent',
-          });
-
-        if (error) {
-          console.error('Error saving notification:', error);
-        }
-
-        alert('Test email sent successfully!');
-      } else {
-        alert(`Failed to send email: ${emailResult.error}`);
-      }
-    } catch (error) {
-      console.error('Error sending test email:', error);
-      alert('Error sending test email. Please check console for details.');
-    } finally {
-      setSending(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -371,10 +258,10 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <Label className="text-left">Course Completions</Label>
+                  <Label className="text-left">Lesson Track Completions</Label>
                   <Switch
-                    checked={preferences?.courseCompletions || false}
-                    onCheckedChange={(checked) => updatePreferences({ courseCompletions: checked })}
+                    checked={preferences?.trackCompletions || false}
+                    onCheckedChange={(checked) => updatePreferences({ trackCompletions: checked })}
                   />
                 </div>
 

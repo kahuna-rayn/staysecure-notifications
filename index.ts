@@ -30,7 +30,7 @@ export interface EmailPreferences {
   taskDueDates: boolean;
   systemAlerts: boolean;
   achievements: boolean;
-  courseCompletions: boolean;
+  trackCompletions: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;

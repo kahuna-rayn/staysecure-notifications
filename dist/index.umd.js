@@ -740,8 +740,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }) => {
     const [preferences, setPreferences] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    const [sending, setSending] = React.useState(false);
-    const [testEmailType, setTestEmailType] = React.useState("system_alert");
     React.useEffect(() => {
       if (awsConfig) {
         EmailService.configure(awsConfig);
@@ -766,7 +764,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             taskDueDates: data.task_due_dates,
             systemAlerts: data.system_alerts,
             achievements: data.achievements,
-            courseCompletions: data.course_completions,
+            trackCompletions: data.track_completions,
             quietHoursEnabled: data.quiet_hours_enabled,
             quietHoursStart: data.quiet_hours_start_time,
             quietHoursEnd: data.quiet_hours_end_time,
@@ -802,7 +800,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         task_due_dates: updatedPrefs.taskDueDates,
         system_alerts: updatedPrefs.systemAlerts,
         achievements: updatedPrefs.achievements,
-        course_completions: updatedPrefs.courseCompletions,
+        track_completions: updatedPrefs.trackCompletions,
         quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
         quiet_hours_start_time: updatedPrefs.quietHoursStart,
         quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -886,12 +884,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             )
           ] }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Course Completions" }),
+            /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Lesson Track Completions" }),
             /* @__PURE__ */ jsxRuntime.jsx(
               Switch,
               {
-                checked: (preferences == null ? void 0 : preferences.courseCompletions) || false,
-                onCheckedChange: (checked) => updatePreferences({ courseCompletions: checked })
+                checked: (preferences == null ? void 0 : preferences.trackCompletions) || false,
+                onCheckedChange: (checked) => updatePreferences({ trackCompletions: checked })
               }
             )
           ] }),

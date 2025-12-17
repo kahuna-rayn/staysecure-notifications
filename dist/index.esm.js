@@ -740,8 +740,6 @@ const EmailNotifications = ({
 }) => {
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [testEmailType, setTestEmailType] = useState("system_alert");
   useEffect(() => {
     if (awsConfig) {
       EmailService.configure(awsConfig);
@@ -766,7 +764,7 @@ const EmailNotifications = ({
           taskDueDates: data.task_due_dates,
           systemAlerts: data.system_alerts,
           achievements: data.achievements,
-          courseCompletions: data.course_completions,
+          trackCompletions: data.track_completions,
           quietHoursEnabled: data.quiet_hours_enabled,
           quietHoursStart: data.quiet_hours_start_time,
           quietHoursEnd: data.quiet_hours_end_time,
@@ -802,7 +800,7 @@ const EmailNotifications = ({
       task_due_dates: updatedPrefs.taskDueDates,
       system_alerts: updatedPrefs.systemAlerts,
       achievements: updatedPrefs.achievements,
-      course_completions: updatedPrefs.courseCompletions,
+      track_completions: updatedPrefs.trackCompletions,
       quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
       quiet_hours_start_time: updatedPrefs.quietHoursStart,
       quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -886,12 +884,12 @@ const EmailNotifications = ({
           )
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Course Completions" }),
+          /* @__PURE__ */ jsx(Label, { className: "text-left", children: "Lesson Track Completions" }),
           /* @__PURE__ */ jsx(
             Switch,
             {
-              checked: (preferences == null ? void 0 : preferences.courseCompletions) || false,
-              onCheckedChange: (checked) => updatePreferences({ courseCompletions: checked })
+              checked: (preferences == null ? void 0 : preferences.trackCompletions) || false,
+              onCheckedChange: (checked) => updatePreferences({ trackCompletions: checked })
             }
           )
         ] }),
