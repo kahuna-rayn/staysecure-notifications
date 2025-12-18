@@ -40,6 +40,7 @@ interface EmailPreferences {
   systemAlerts: boolean;
   achievements: boolean;
   trackCompletions: boolean;
+  lessonReminders: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -113,6 +114,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           systemAlerts: data.system_alerts,
           achievements: data.achievements,
           trackCompletions: data.track_completions,
+          lessonReminders: data.lesson_reminders ?? true, // Default to true if null
           quietHoursEnabled: data.quiet_hours_enabled,
           quietHoursStart: data.quiet_hours_start_time,
           quietHoursEnd: data.quiet_hours_end_time,
@@ -153,6 +155,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       system_alerts: updatedPrefs.systemAlerts,
       achievements: updatedPrefs.achievements,
       track_completions: updatedPrefs.trackCompletions,
+      lesson_reminders: updatedPrefs.lessonReminders,
       quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
       quiet_hours_start_time: updatedPrefs.quietHoursStart,
       quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -270,16 +273,18 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                   <div className="flex items-center justify-between">
                     <Label className="text-left font-medium">Lesson Reminders</Label>
                     <Switch
-                    checked={preferences?.reminderDaysBefore !== undefined && preferences?.reminderDaysBefore >= 0}
+                    checked={preferences?.lessonReminders ?? true}
                     onCheckedChange={(checked) => {
                       updatePreferences({ 
-                        reminderDaysBefore: checked ? 1 : -1 // -1 means disabled
+                        lessonReminders: checked,
+                        // Also update reminderDaysBefore to maintain consistency
+                        reminderDaysBefore: checked ? (preferences?.reminderDaysBefore ?? 1) : -1
                       });
                     }}
                     />
                   </div>
                   
-                  {preferences?.reminderDaysBefore !== undefined && preferences?.reminderDaysBefore >= 0 && (
+                  {preferences?.lessonReminders && (
                     <div className="space-y-4 pl-4 border-l-2 border-blue-200">
                       <div className="grid grid-cols-2 gap-4">
                         <div>

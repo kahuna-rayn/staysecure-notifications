@@ -765,6 +765,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             systemAlerts: data.system_alerts,
             achievements: data.achievements,
             trackCompletions: data.track_completions,
+            lessonReminders: data.lesson_reminders ?? true,
+            // Default to true if null
             quietHoursEnabled: data.quiet_hours_enabled,
             quietHoursStart: data.quiet_hours_start_time,
             quietHoursEnd: data.quiet_hours_end_time,
@@ -801,6 +803,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         system_alerts: updatedPrefs.systemAlerts,
         achievements: updatedPrefs.achievements,
         track_completions: updatedPrefs.trackCompletions,
+        lesson_reminders: updatedPrefs.lessonReminders,
         quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
         quiet_hours_start_time: updatedPrefs.quietHoursStart,
         quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -899,17 +902,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               /* @__PURE__ */ jsxRuntime.jsx(
                 Switch,
                 {
-                  checked: (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0,
+                  checked: (preferences == null ? void 0 : preferences.lessonReminders) ?? true,
                   onCheckedChange: (checked) => {
                     updatePreferences({
-                      reminderDaysBefore: checked ? 1 : -1
-                      // -1 means disabled
+                      lessonReminders: checked,
+                      // Also update reminderDaysBefore to maintain consistency
+                      reminderDaysBefore: checked ? (preferences == null ? void 0 : preferences.reminderDaysBefore) ?? 1 : -1
                     });
                   }
                 }
               )
             ] }),
-            (preferences == null ? void 0 : preferences.reminderDaysBefore) !== void 0 && (preferences == null ? void 0 : preferences.reminderDaysBefore) >= 0 && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+            (preferences == null ? void 0 : preferences.lessonReminders) && /* @__PURE__ */ jsxRuntime.jsx("div", { className: "space-y-4 pl-4 border-l-2 border-blue-200", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
               /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntime.jsx(Label, { htmlFor: "reminder-days", className: "text-sm", children: "Days before lesson" }),
                 /* @__PURE__ */ jsxRuntime.jsx(

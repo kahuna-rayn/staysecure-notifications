@@ -47,15 +47,20 @@ The StaySecure Hub notification system provides a flexible, template-based appro
   - System templates (cannot be deleted, only edited)
   - Custom templates (can create/edit/delete)
 
-### 2. Rules Engine
-- **Purpose**: Define when and to whom notifications are sent
-- **Who manages**: Client Admins
+### 2. Rules Engine (`notification_rules` table)
+- **Purpose**: System-level configuration of notification behavior
+- **Who manages**: Super Admins only (not client admins)
 - **Features**:
-  - Event-based triggers
-  - Conditional logic
-  - Scheduling options
-  - User targeting (all, departments, locations, roles)
-  - Rate limiting and cooldowns
+  - Event-based triggers (`trigger_event`)
+  - Conditional logic (`trigger_conditions` - e.g., score >= 90)
+  - Which template to use (`email_template_id`)
+  - Scheduling options (immediate, delayed, quiet hours)
+  - Rate limiting and cooldowns (throttling)
+  - Enable/disable specific notification types (`is_enabled`)
+
+**Distinction from `email_preferences`:**
+- `notification_rules` = System configuration: "What notifications exist and how do they work?"
+- `email_preferences` = User opt-in/opt-out: "Does this recipient want to receive them?"
 
 ### 3. Delivery System
 - **Purpose**: Send notifications via multiple channels
@@ -70,32 +75,36 @@ The StaySecure Hub notification system provides a flexible, template-based appro
 
 ### Uses Existing Tables
 - ✅ `email_notifications` - Stores sent email records
-- ✅ `email_preferences` - User notification preferences
-- ✅ `email_templates` - Legacy email templates (to be migrated)
+- ✅ `email_preferences` - **User/org opt-in/opt-out preferences** (e.g., "I want achievement emails")
+- ✅ `email_templates` - Email template content (subject, body HTML)
 - ✅ `user_learning_track_progress` - Tracks learning progress
 - ✅ `user_lesson_progress` - Tracks lesson completion
 - ✅ `quiz_attempts` - Tracks quiz scores
 
 ### New Tables (Only 2!)
 - ✅ `email_templates` - ENHANCED (not replaced) with `is_system`, `category` columns
-- 🆕 `notification_rules` - Rule configurations (when to send)
+- 🆕 `notification_rules` - System-level rule configurations (super_admin only - when to send)
 - 🆕 `notification_history` - Delivery tracking and audit trail
 
 ## Security & Permissions
 
-### Client Admin Permissions
+### Super Admin Permissions
 - ✅ Create/edit/delete custom templates
 - ✅ Edit system templates (content only, not delete)
-- ❌ Delete system templates
-- ✅ Create/edit/delete notification rules
+- ✅ Delete system templates
+- ✅ Create/edit/delete notification rules (super_admin only)
 - ✅ Test notifications (send to self)
 - ✅ View notification history and analytics
 - ✅ Preview templates with sample data
 
-### User Permissions
-- ✅ Control their own notification preferences via `email_preferences`
+### Client Admin Permissions
+- ✅ Set organisation preferences
+- ✅ View notification history and analytics
+
+### User Permissions (**NOT IMPLEMENTED**)
+- ✅ Control their own notification preferences via `email_preferences` (opt-in/opt-out)
 - ✅ View their notification history
-- ❌ Access templates or rules
+- ❌ Access templates (client admin configuration) or rules (super admin configuration)
 - ❌ Send notifications
 
 ### Service Role
@@ -111,9 +120,9 @@ The StaySecure Hub notification system provides a flexible, template-based appro
 **Notification Types**:
 - ✅ Lesson reminders (already implemented)
 - 🆕 Lesson completed
-- 🆕 Track milestones (25%, 50%, 75%, 100%)
+- 🆕 Track milestones (25%, 50%, 75%, 100%) <-- SAME AS TRACK COMPLETION AT 100%, ONLY IMPLEMENTED 50% AND 100%>
 - 🆕 Quiz performance (pass/fail/perfect)
-- 🆕 Track completion
+- 🆕 Track completion (SEE Track milestones)
 - 🆕 Assignment deadlines
 - 🆕 Inactivity reminders
 
@@ -174,6 +183,81 @@ See [GAMIFICATION_ROADMAP.md](./GAMIFICATION_ROADMAP.md) for detailed roadmap.
 - **Consistency**: Matches current system architecture
 - **Less Code**: Fewer tables = less complexity
 - **Backward Compatible**: Nothing breaks
+
+## Data-Driven vs Code-Driven: How They Work Together
+
+The notification system uses a **hybrid approach**: some parts are data-driven (configurable in the database), others are code-driven (implemented in the application code).
+
+### What's Data-Driven (Database Configurable)
+
+**`notification_rules` table controls (Super Admin configuration):**
+- ✅ Which templates to use (`email_template_id`)
+- ✅ Trigger conditions (`trigger_conditions` JSONB - e.g., `score >= 90`)
+- ✅ Whether rule is active (`is_enabled`) - **System-level enable/disable**
+- ✅ Scheduling (`send_immediately`, `schedule_delay_minutes`)
+- ✅ Throttling (`max_sends_per_user_per_day`, `cooldown_hours`)
+
+**`email_preferences` table controls (Recipient opt-in/opt-out):**
+- ✅ Global email enable/disable (`email_enabled`)
+- ✅ Category preferences (`track_completions`, `achievements`, `lesson_reminders`)
+- ✅ Quiet hours settings
+
+**`email_templates` table controls:**
+- ✅ Template content (subject, HTML body)
+- ✅ Template variables (documented for admins)
+
+### What's Code-Driven (Hardcoded)
+
+**Preference Mapping** (in `sendNotification.ts`):
+- Event type → preference field mapping is hardcoded
+- Example: `'track_completed'` always checks `preferences.track_completions`
+- Example: `'quiz_high_score'` always checks `preferences.achievements`
+
+**Variable Gathering** (in `sendNotification.ts`):
+- Each event type has specific code to fetch data from the database
+- Example: `'lesson_completed'` calls `gatherLessonCompletedVariables()`
+- Example: `'track_milestone_50'` has inline code to fetch track data
+- **Note**: `'track_completed'` currently falls back to basic variables (needs implementation)
+
+### How They Work Together
+
+```
+1. Event occurs → Code calls: sendNotificationByEvent('track_completed', {...})
+   ↓
+2. Code queries: notification_rules WHERE trigger_event = 'track_completed'
+   ↓
+3. Code checks: Is rule enabled? (notification_rules.is_enabled) ✅ Data-driven
+   ↓
+4. Code checks: Trigger conditions (notification_rules.trigger_conditions) ✅ Data-driven
+   ↓
+5. Code checks: Recipient preferences (email_preferences.track_completions) ✅ Data-driven
+   ↓
+6. Code gathers: Template variables (hardcoded switch statement) ❌ Code-driven
+   ↓
+7. Code fetches: Email template (notification_rules.email_template_id → email_templates) ✅ Data-driven
+   ↓
+8. Code sends: Email using template + variables
+```
+
+**Key Distinction:**
+- **Step 3-4**: `notification_rules` = System-level: "Does this notification type exist and when should it fire?"
+- **Step 5**: `email_preferences` = Recipient-level: "Does this user want to receive it?"
+
+### Why This Hybrid Approach?
+
+**Benefits:**
+- ✅ **Flexibility for admins**: Create/edit rules and templates without code changes
+- ✅ **Consistency**: Variable gathering logic is centralized and tested
+- ✅ **Type safety**: Code ensures correct data structures
+
+**Limitations:**
+- ⚠️ Adding new event types requires code changes (preference mapping + variable gathering)
+- ⚠️ Preference mapping is not configurable - must modify code to change which preference controls which event
+- ⚠️ Variable gathering is not extensible - new event types need new code
+
+**Future Enhancement Options:**
+- Store preference field mapping in `notification_rules` table
+- Create plugin system for variable gathering (more complex but fully data-driven)
 
 ## File Structure
 
