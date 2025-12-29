@@ -12,6 +12,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import { emailService } from '../lib/emailService';
 
 interface EmailTemplate {
   id: string;
@@ -667,24 +668,8 @@ export default function EmailTemplateManager({
                       <div className="mt-1 p-2 bg-gray-50 rounded border">
                         {(() => {
                           const sampleData: Record<string, any> = generateSampleVariables(selectedTemplate.type);
-                          // Process template with Handlebars conditionals and variable substitution
-                          let result = selectedTemplate.subject_template;
-                          
-                          // Handle Handlebars conditionals {{#if variable}}...{{/if}}
-                          result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
-                            const value = sampleData[variableName];
-                            if (value && value !== '' && value !== 'false' && value !== '0') {
-                              return content;
-                            }
-                            return '';
-                          });
-                          
-                          // Substitute variables
-                          for (const [key, value] of Object.entries(sampleData)) {
-                            result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value || ''));
-                          }
-                          
-                          return result;
+                          // Use the same substitution logic as the actual email service
+                          return emailService.substituteVariables(selectedTemplate.subject_template, sampleData);
                         })()}
                       </div>
                     </div>
@@ -697,24 +682,8 @@ export default function EmailTemplateManager({
                           dangerouslySetInnerHTML={{
                             __html: (() => {
                               const sampleData: Record<string, any> = generateSampleVariables(selectedTemplate.type);
-                              // Process template with Handlebars conditionals and variable substitution
-                              let result = selectedTemplate.html_body_template;
-                              
-                              // Handle Handlebars conditionals {{#if variable}}...{{/if}}
-                              result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
-                                const value = sampleData[variableName];
-                                if (value && value !== '' && value !== 'false' && value !== '0') {
-                                  return content;
-                                }
-                                return '';
-                              });
-                              
-                              // Substitute variables
-                              for (const [key, value] of Object.entries(sampleData)) {
-                                result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value || ''));
-                              }
-                              
-                              return result;
+                              // Use the same substitution logic as the actual email service
+                              return emailService.substituteVariables(selectedTemplate.html_body_template, sampleData);
                             })()
                           }}
                         />

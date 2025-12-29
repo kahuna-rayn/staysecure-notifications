@@ -1284,13 +1284,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             client_login_url: clientLoginUrl
           };
         case "track_milestone_50":
+        case "track_milestone_100":
           return {
             ...baseVariables,
-            milestone_percentage: 50,
-            lessons_completed: 5,
-            total_lessons: 10,
+            track_progress_percentage: templateType === "track_milestone_100" ? 100 : 50,
+            lessons_completed_in_track: 5,
+            total_lessons_in_track: 10,
             time_spent_hours: 12,
-            continue_learning_url: clientLoginUrl,
             client_login_url: clientLoginUrl
           };
         case "quiz_high_score":
@@ -1300,8 +1300,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             score: 95,
             correct_answers: 19,
             total_questions: 20,
-            view_results_url: clientLoginUrl,
-            continue_learning_url: clientLoginUrl,
             client_login_url: clientLoginUrl
           };
         case "lesson_reminder":
@@ -1519,18 +1517,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                   /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Subject:" }),
                   /* @__PURE__ */ jsxRuntime.jsx("div", { className: "mt-1 p-2 bg-gray-50 rounded border", children: (() => {
                     const sampleData = generateSampleVariables(selectedTemplate.type);
-                    let result = selectedTemplate.subject_template;
-                    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
-                      const value = sampleData[variableName];
-                      if (value && value !== "" && value !== "false" && value !== "0") {
-                        return content;
-                      }
-                      return "";
-                    });
-                    for (const [key, value] of Object.entries(sampleData)) {
-                      result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), String(value || ""));
-                    }
-                    return result;
+                    return emailService.substituteVariables(selectedTemplate.subject_template, sampleData);
                   })() })
                 ] }),
                 /* @__PURE__ */ jsxRuntime.jsxs("div", { children: [
@@ -1542,18 +1529,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                       dangerouslySetInnerHTML: {
                         __html: (() => {
                           const sampleData = generateSampleVariables(selectedTemplate.type);
-                          let result = selectedTemplate.html_body_template;
-                          result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
-                            const value = sampleData[variableName];
-                            if (value && value !== "" && value !== "false" && value !== "0") {
-                              return content;
-                            }
-                            return "";
-                          });
-                          for (const [key, value] of Object.entries(sampleData)) {
-                            result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), String(value || ""));
-                          }
-                          return result;
+                          return emailService.substituteVariables(selectedTemplate.html_body_template, sampleData);
                         })()
                       }
                     }
