@@ -372,13 +372,13 @@ export default function EmailTemplateManager({
           client_login_url: clientLoginUrl
         };
       case 'track_milestone_50':
+      case 'track_milestone_100':
         return {
           ...baseVariables,
-          milestone_percentage: 50,
-          lessons_completed: 5,
-          total_lessons: 10,
+          track_progress_percentage: templateType === 'track_milestone_100' ? 100 : 50,
+          lessons_completed_in_track: 5,
+          total_lessons_in_track: 10,
           time_spent_hours: 12,
-          continue_learning_url: clientLoginUrl,
           client_login_url: clientLoginUrl
         };
       case 'quiz_high_score':
@@ -388,8 +388,6 @@ export default function EmailTemplateManager({
           score: 95,
           correct_answers: 19,
           total_questions: 20,
-          view_results_url: clientLoginUrl,
-          continue_learning_url: clientLoginUrl,
           client_login_url: clientLoginUrl
         };
       case 'lesson_reminder':
