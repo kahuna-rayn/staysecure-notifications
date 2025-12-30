@@ -73,12 +73,49 @@ export class EmailService {
     return `${base}${path}/#/lesson/${lessonId}`;
   }
 
-  // Template variable substitution with Handlebars-like conditionals support
+  // Template variable substitution with Handlebars-like conditionals and loops support
   // Made public so it can be used in preview
   public substituteVariables(template: string, variables: Record<string, any>): string {
     let result = template;
     
-    // First, handle Handlebars conditionals {{#if variable}}...{{/if}}
+    // Step 1: Process loops first ({{#each array_key}}...{{/each}})
+    // This allows variables inside loops to reference array item properties
+    const eachPattern = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+    const eachMatches = Array.from(template.matchAll(eachPattern));
+    console.log('substituteVariables - Found {{#each}} loops:', eachMatches.length, eachMatches.map(m => ({ key: m[1], content: m[2].substring(0, 50) })));
+    
+    result = result.replace(eachPattern, (_match, arrayKey, loopContent) => {
+      console.log(`substituteVariables - Processing {{#each ${arrayKey}}}:`, {
+        arrayKey,
+        arrayValue: variables[arrayKey],
+        isArray: Array.isArray(variables[arrayKey]),
+        length: Array.isArray(variables[arrayKey]) ? variables[arrayKey].length : 'N/A',
+        loopContent: loopContent.substring(0, 100)
+      });
+      
+      const arrayValue = variables[arrayKey];
+      if (!Array.isArray(arrayValue) || arrayValue.length === 0) {
+        console.log(`substituteVariables - Skipping {{#each ${arrayKey}}} - not an array or empty`);
+        return ''; // Hide loop if array is empty or not an array
+      }
+      
+      // Process each item in the array
+      const itemsHtml = arrayValue.map((item: any) => {
+        let itemHtml = loopContent;
+        // Replace {{property}} with item.property value
+        // Handle nested properties like {{lesson_title}} or {{learning_track_title}}
+        itemHtml = itemHtml.replace(/\{\{(\w+)\}\}/g, (varMatch: string, propKey: string) => {
+          const value = item[propKey] !== undefined ? String(item[propKey] || '') : varMatch;
+          return value;
+        });
+        return itemHtml;
+      }).join('');
+      
+      console.log(`substituteVariables - {{#each ${arrayKey}}} result:`, itemsHtml.substring(0, 200));
+      return itemsHtml;
+    });
+    
+    // Step 2: Handle Handlebars conditionals {{#if variable}}...{{/if}}
     // Remove blocks where the condition is false/undefined/null
     result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
       const value = variables[variableName];
@@ -89,8 +126,12 @@ export class EmailService {
       return ''; // Remove the block if condition is false
     });
     
-    // Then substitute all remaining variables
+    // Step 3: Substitute all remaining variables (skip arrays - they're handled by loops)
     for (const [key, value] of Object.entries(variables)) {
+      if (Array.isArray(value)) {
+        // Skip arrays - they're handled by loops above
+        continue;
+      }
       const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
       result = result.replace(regex, String(value || ''));
     }

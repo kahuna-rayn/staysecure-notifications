@@ -409,10 +409,37 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const path = clientPath ? `/${clientPath}` : "";
       return `${base}${path}/#/lesson/${lessonId}`;
     }
-    // Template variable substitution with Handlebars-like conditionals support
+    // Template variable substitution with Handlebars-like conditionals and loops support
     // Made public so it can be used in preview
     substituteVariables(template, variables) {
       let result = template;
+      const eachPattern = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+      const eachMatches = Array.from(template.matchAll(eachPattern));
+      console.log("substituteVariables - Found {{#each}} loops:", eachMatches.length, eachMatches.map((m) => ({ key: m[1], content: m[2].substring(0, 50) })));
+      result = result.replace(eachPattern, (_match, arrayKey, loopContent) => {
+        console.log(`substituteVariables - Processing {{#each ${arrayKey}}}:`, {
+          arrayKey,
+          arrayValue: variables[arrayKey],
+          isArray: Array.isArray(variables[arrayKey]),
+          length: Array.isArray(variables[arrayKey]) ? variables[arrayKey].length : "N/A",
+          loopContent: loopContent.substring(0, 100)
+        });
+        const arrayValue = variables[arrayKey];
+        if (!Array.isArray(arrayValue) || arrayValue.length === 0) {
+          console.log(`substituteVariables - Skipping {{#each ${arrayKey}}} - not an array or empty`);
+          return "";
+        }
+        const itemsHtml = arrayValue.map((item) => {
+          let itemHtml = loopContent;
+          itemHtml = itemHtml.replace(/\{\{(\w+)\}\}/g, (varMatch, propKey) => {
+            const value = item[propKey] !== void 0 ? String(item[propKey] || "") : varMatch;
+            return value;
+          });
+          return itemHtml;
+        }).join("");
+        console.log(`substituteVariables - {{#each ${arrayKey}}} result:`, itemsHtml.substring(0, 200));
+        return itemsHtml;
+      });
       result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
         const value = variables[variableName];
         if (value && value !== "" && value !== "false" && value !== "0") {
@@ -421,6 +448,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return "";
       });
       for (const [key, value] of Object.entries(variables)) {
+        if (Array.isArray(value)) {
+          continue;
+        }
         const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
         result = result.replace(regex, String(value || ""));
       }
@@ -1135,10 +1165,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const { data: sampleTrack } = await supabaseClient.from("learning_tracks").select("id").limit(1).single();
           if (sampleTrack) context.learning_track_id = sampleTrack.id;
         }
+        if (template.type === "manager_employee_incomplete") {
+          context.manager_id = sampleUser.id;
+        }
         if (template.type === "quiz_high_score") {
           context.score = 95;
         }
-        const variables = await gatherTemplateVariables(supabaseClient, template.type, context);
+        const templateBody = template.html_body_template || "";
+        const variables = await gatherTemplateVariables(supabaseClient, template.type, context, templateBody);
         setPreviewVariables(variables);
       } catch (error2) {
         console.error("Error gathering preview variables:", error2);
@@ -1208,10 +1242,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const { data: sampleTrack } = await supabaseClient.from("learning_tracks").select("id").limit(1).single();
           if (sampleTrack) context.learning_track_id = sampleTrack.id;
         }
+        if (template.type === "manager_employee_incomplete") {
+          context.manager_id = user.id;
+        }
         if (template.type === "quiz_high_score") {
           context.score = 95;
         }
-        const templateVariables = await gatherTemplateVariables(supabaseClient, template.type, context);
+        const templateBody = template.html_body_template || "";
+        const templateVariables = await gatherTemplateVariables(supabaseClient, template.type, context, templateBody);
         const { data: notificationData, error: notificationError } = await supabaseClient.from("notification_history").insert({
           user_id: user.id,
           email_template_id: template.id,
@@ -1518,10 +1556,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     {
                       className: "p-4 prose max-w-none",
                       dangerouslySetInnerHTML: {
-                        __html: loadingPreview ? "<div>Loading preview...</div>" : previewVariables ? (
-                          // Use real variables from database via gatherTemplateVariables
-                          emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables)
-                        ) : "<div>Error loading preview variables</div>"
+                        __html: loadingPreview ? "<div>Loading preview...</div>" : previewVariables ? (() => {
+                          console.log("Preview - calling substituteVariables with:", {
+                            template: selectedTemplate.html_body_template.substring(0, 200) + "...",
+                            variables: {
+                              ...previewVariables,
+                              incomplete_lessons: Array.isArray(previewVariables.incomplete_lessons) ? `Array(${previewVariables.incomplete_lessons.length})` : previewVariables.incomplete_lessons
+                            }
+                          });
+                          const result = emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables);
+                          console.log("Preview - substituteVariables result:", result.substring(0, 500) + "...");
+                          return result;
+                        })() : "<div>Error loading preview variables</div>"
                       }
                     }
                   ) })

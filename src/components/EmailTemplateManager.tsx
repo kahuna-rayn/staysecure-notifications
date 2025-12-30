@@ -56,7 +56,7 @@ interface EmailTemplateManagerProps {
   PopoverContent: any;
   PopoverTrigger: any;
   isSuperAdmin?: boolean;
-  gatherTemplateVariables?: (supabase: any, eventType: string, context: any) => Promise<Record<string, unknown>>;
+  gatherTemplateVariables?: (supabase: any, eventType: string, context: any, templateText?: string) => Promise<Record<string, unknown>>;
 }
 
 export default function EmailTemplateManager({
@@ -196,13 +196,20 @@ export default function EmailTemplateManager({
         if (sampleTrack) context.learning_track_id = sampleTrack.id;
       }
       
+      // For manager_employee_incomplete, use current user as manager
+      if (template.type === 'manager_employee_incomplete') {
+        context.manager_id = sampleUser.id;
+      }
+      
       // Add score for quiz templates
       if (template.type === 'quiz_high_score') {
         context.score = 95;
       }
       
       // Use gatherTemplateVariables to get real variables from database
-      const variables = await gatherTemplateVariables(supabaseClient, template.type, context);
+      // Pass template HTML body to look up any missing variables from template_variables table
+      const templateBody = template.html_body_template || '';
+      const variables = await gatherTemplateVariables(supabaseClient, template.type, context, templateBody);
       setPreviewVariables(variables);
     } catch (error) {
       console.error('Error gathering preview variables:', error);
@@ -302,12 +309,19 @@ export default function EmailTemplateManager({
         if (sampleTrack) context.learning_track_id = sampleTrack.id;
       }
       
+      // For manager_employee_incomplete, use current user as manager
+      if (template.type === 'manager_employee_incomplete') {
+        context.manager_id = user.id;
+      }
+      
       // Add score for quiz templates
       if (template.type === 'quiz_high_score') {
         context.score = 95;
       }
       
-      const templateVariables = await gatherTemplateVariables(supabaseClient, template.type, context);
+      // Pass template HTML body to look up any missing variables from template_variables table
+      const templateBody = template.html_body_template || '';
+      const templateVariables = await gatherTemplateVariables(supabaseClient, template.type, context, templateBody);
       
       // Create a notification record first to track the test email
       const { data: notificationData, error: notificationError } = await supabaseClient
@@ -709,8 +723,21 @@ export default function EmailTemplateManager({
                             __html: loadingPreview ? (
                               '<div>Loading preview...</div>'
                             ) : previewVariables ? (
-                              // Use real variables from database via gatherTemplateVariables
-                              emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables)
+                              (() => {
+                                // Debug: log what we're passing to substituteVariables
+                                console.log('Preview - calling substituteVariables with:', {
+                                  template: selectedTemplate.html_body_template.substring(0, 200) + '...',
+                                  variables: {
+                                    ...previewVariables,
+                                    incomplete_lessons: Array.isArray(previewVariables.incomplete_lessons) 
+                                      ? `Array(${previewVariables.incomplete_lessons.length})` 
+                                      : previewVariables.incomplete_lessons
+                                  }
+                                });
+                                const result = emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables);
+                                console.log('Preview - substituteVariables result:', result.substring(0, 500) + '...');
+                                return result;
+                              })()
                             ) : (
                               '<div>Error loading preview variables</div>'
                             )
