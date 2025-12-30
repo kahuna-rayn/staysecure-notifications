@@ -1063,7 +1063,8 @@ function EmailTemplateManager({
   Popover,
   PopoverContent,
   PopoverTrigger,
-  isSuperAdmin = false
+  isSuperAdmin = false,
+  gatherTemplateVariables
 }) {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1077,6 +1078,8 @@ function EmailTemplateManager({
   const [isCreating, setIsCreating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(null);
   const [emailDialog, setEmailDialog] = useState({ open: false, type: "success", message: "" });
+  const [previewVariables, setPreviewVariables] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   React.useEffect(() => {
     const style = document.createElement("style");
     style.textContent = `
@@ -1107,9 +1110,42 @@ function EmailTemplateManager({
     setSelectedTemplate(template);
     setIsEditing(true);
   };
-  const handleView = (template) => {
+  const handleView = async (template) => {
     setSelectedTemplate(template);
     setIsViewing(true);
+    setLoadingPreview(true);
+    if (!gatherTemplateVariables) {
+      console.error("gatherTemplateVariables is required for preview");
+      setLoadingPreview(false);
+      return;
+    }
+    try {
+      const { data: sampleUser } = await supabaseClient.from("profiles").select("id").limit(1).single();
+      if (!sampleUser) {
+        console.error("No user found for preview");
+        setLoadingPreview(false);
+        return;
+      }
+      const context = { user_id: sampleUser.id };
+      if (template.type === "lesson_completed" || template.type === "quiz_high_score" || template.type === "lesson_reminder") {
+        const { data: sampleLesson } = await supabaseClient.from("lessons").select("id").limit(1).single();
+        if (sampleLesson) context.lesson_id = sampleLesson.id;
+      }
+      if (template.type.includes("track_milestone") || template.type === "lesson_completed") {
+        const { data: sampleTrack } = await supabaseClient.from("learning_tracks").select("id").limit(1).single();
+        if (sampleTrack) context.learning_track_id = sampleTrack.id;
+      }
+      if (template.type === "quiz_high_score") {
+        context.score = 95;
+      }
+      const variables = await gatherTemplateVariables(supabaseClient, template.type, context);
+      setPreviewVariables(variables);
+    } catch (error2) {
+      console.error("Error gathering preview variables:", error2);
+      setPreviewVariables(null);
+    } finally {
+      setLoadingPreview(false);
+    }
   };
   const handleDelete = async (template) => {
     if (template.is_system) {
@@ -1154,13 +1190,34 @@ function EmailTemplateManager({
         });
         return;
       }
-      const sampleVariables = generateSampleVariables(template.type);
+      if (!gatherTemplateVariables) {
+        setEmailDialog({
+          open: true,
+          type: "error",
+          message: "gatherTemplateVariables is required for test emails"
+        });
+        setSendingEmail(null);
+        return;
+      }
+      const context = { user_id: user.id };
+      if (template.type === "lesson_completed" || template.type === "quiz_high_score" || template.type === "lesson_reminder") {
+        const { data: sampleLesson } = await supabaseClient.from("lessons").select("id").limit(1).single();
+        if (sampleLesson) context.lesson_id = sampleLesson.id;
+      }
+      if (template.type.includes("track_milestone") || template.type === "lesson_completed") {
+        const { data: sampleTrack } = await supabaseClient.from("learning_tracks").select("id").limit(1).single();
+        if (sampleTrack) context.learning_track_id = sampleTrack.id;
+      }
+      if (template.type === "quiz_high_score") {
+        context.score = 95;
+      }
+      const templateVariables = await gatherTemplateVariables(supabaseClient, template.type, context);
       const { data: notificationData, error: notificationError } = await supabaseClient.from("notification_history").insert({
         user_id: user.id,
         email_template_id: template.id,
         // Include the template ID!
         trigger_event: template.type,
-        template_variables: sampleVariables,
+        template_variables: templateVariables,
         status: "pending",
         channel: "email",
         priority: "normal"
@@ -1175,7 +1232,7 @@ function EmailTemplateManager({
         template.html_body_template,
         template.text_body_template || "",
         user.email,
-        sampleVariables,
+        templateVariables,
         supabaseClient,
         notificationData == null ? void 0 : notificationData.id
         // Pass notification ID for status tracking
@@ -1184,20 +1241,20 @@ function EmailTemplateManager({
         setEmailDialog({
           open: true,
           type: "success",
-          message: `Test email sent successfully to ${user.email}`
+          message: `Test email for "${template.name}" sent successfully to ${user.email}`
         });
       } else {
         setEmailDialog({
           open: true,
           type: "error",
-          message: `Failed to send test email: ${result.error}`
+          message: `Failed to send test email for "${template.name}": ${result.error}`
         });
       }
     } catch (err) {
       setEmailDialog({
         open: true,
         type: "error",
-        message: `Error sending test email: ${err.message}`
+        message: `Error sending test email for "${template.name}": ${err.message}`
       });
     } finally {
       setSendingEmail(null);
@@ -1245,72 +1302,6 @@ function EmailTemplateManager({
       loadTemplates();
     } catch (err) {
       alert(`Error saving template: ${err.message}`);
-    }
-  };
-  const generateSampleVariables = (templateType) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
-    const pathParts = typeof window !== "undefined" ? window.location.pathname.split("/").filter(Boolean) : [];
-    const clientId = pathParts[0] || "default";
-    const clientPath = clientId !== "default" ? `/${clientId}` : "";
-    const clientLoginUrl = `${origin}${clientPath}/login`;
-    const baseVariables = {
-      user_name: "John Doe",
-      lesson_title: "Introduction to Cybersecurity",
-      learning_track_title: "Cybersecurity Fundamentals",
-      lesson_description: "Learn the basics of cybersecurity and how to protect digital assets.",
-      completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US"),
-      completion_time: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-      available_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      }),
-      reminder_type: "Available Now",
-      lesson_url: `${origin}${clientPath}/#/lesson/sample-lesson-id`,
-      client_login_url: clientLoginUrl
-    };
-    switch (templateType) {
-      case "lesson_completed":
-        return {
-          ...baseVariables,
-          lessons_completed_in_track: 5,
-          total_lessons_in_track: 10,
-          track_progress_percentage: 50,
-          next_lesson_title: "Advanced Security Concepts",
-          next_lesson_available: true,
-          next_lesson_url: clientLoginUrl,
-          // Use client_login_url instead of hardcoded localhost
-          client_login_url: clientLoginUrl
-        };
-      case "track_milestone_50":
-      case "track_milestone_100":
-        return {
-          ...baseVariables,
-          track_progress_percentage: templateType === "track_milestone_100" ? 100 : 50,
-          lessons_completed_in_track: 5,
-          total_lessons_in_track: 10,
-          time_spent_hours: 12,
-          client_login_url: clientLoginUrl
-        };
-      case "quiz_high_score":
-        return {
-          ...baseVariables,
-          quiz_title: "Cybersecurity Basics Quiz",
-          score: 95,
-          correct_answers: 19,
-          total_questions: 20,
-          client_login_url: clientLoginUrl
-        };
-      case "lesson_reminder":
-        return {
-          ...baseVariables,
-          lesson_description: "Learn the basics of cybersecurity and how to protect digital assets.",
-          reminder_type: "Available Now",
-          client_login_url: clientLoginUrl
-        };
-      default:
-        return baseVariables;
     }
   };
   const filteredTemplates = templates.filter((template) => {
@@ -1515,10 +1506,10 @@ function EmailTemplateManager({
             /* @__PURE__ */ jsxs("div", { className: "space-y-4", children: [
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Subject:" }),
-                /* @__PURE__ */ jsx("div", { className: "mt-1 p-2 bg-gray-50 rounded border", children: (() => {
-                  const sampleData = generateSampleVariables(selectedTemplate.type);
-                  return emailService.substituteVariables(selectedTemplate.subject_template, sampleData);
-                })() })
+                /* @__PURE__ */ jsx("div", { className: "mt-1 p-2 bg-gray-50 rounded border", children: loadingPreview ? "Loading preview..." : previewVariables ? (
+                  // Use real variables from database via gatherTemplateVariables
+                  emailService.substituteVariables(selectedTemplate.subject_template, previewVariables)
+                ) : "Error loading preview variables" })
               ] }),
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx(Label, { className: "text-sm font-medium text-gray-600", children: "Email Body:" }),
@@ -1527,10 +1518,10 @@ function EmailTemplateManager({
                   {
                     className: "p-4 prose max-w-none",
                     dangerouslySetInnerHTML: {
-                      __html: (() => {
-                        const sampleData = generateSampleVariables(selectedTemplate.type);
-                        return emailService.substituteVariables(selectedTemplate.html_body_template, sampleData);
-                      })()
+                      __html: loadingPreview ? "<div>Loading preview...</div>" : previewVariables ? (
+                        // Use real variables from database via gatherTemplateVariables
+                        emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables)
+                      ) : "<div>Error loading preview variables</div>"
                     }
                   }
                 ) })
@@ -1540,6 +1531,7 @@ function EmailTemplateManager({
           /* @__PURE__ */ jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsx(Button, { variant: "outline", onClick: () => {
             setIsViewing(false);
             setSelectedTemplate(null);
+            setPreviewVariables(null);
           }, children: "Close Preview" }) })
         ] })
       ) : (
