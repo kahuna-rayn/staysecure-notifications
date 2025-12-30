@@ -494,10 +494,10 @@ export async function gatherLessonCompletedVariables(
   }
 ): Promise<Record<string, any>> {
   try {
-    // Get user info
+    // Get user info - use username (which stores email) instead of email column
     const { data: user } = await supabaseClient
       .from('profiles')
-      .select('full_name, email')
+      .select('full_name, username')
       .eq('id', event.user_id)
       .single();
 
@@ -583,7 +583,7 @@ export async function gatherLessonCompletedVariables(
 
     return {
       user_name: user?.full_name || 'User',
-      user_email: user?.email || '',
+      user_email: user?.username || '',
       lesson_title: lesson?.title || 'Lesson',
       lesson_description: lesson?.description || '',
       learning_track_title: track?.title || '',

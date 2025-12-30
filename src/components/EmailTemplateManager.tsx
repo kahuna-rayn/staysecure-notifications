@@ -57,6 +57,7 @@ interface EmailTemplateManagerProps {
   PopoverTrigger: any;
   isSuperAdmin?: boolean;
   gatherTemplateVariables?: (supabase: any, eventType: string, context: any, templateText?: string) => Promise<Record<string, unknown>>;
+  toast?: (options: { title: string; description?: string; variant?: 'default' | 'destructive' }) => void;
 }
 
 export default function EmailTemplateManager({
@@ -87,7 +88,8 @@ export default function EmailTemplateManager({
   PopoverContent,
   PopoverTrigger,
   isSuperAdmin = false,
-  gatherTemplateVariables
+  gatherTemplateVariables,
+  toast
 }: EmailTemplateManagerProps) {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +120,11 @@ export default function EmailTemplateManager({
       }
     `;
     document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
   }, []);
 
   // Load templates
@@ -419,7 +425,11 @@ export default function EmailTemplateManager({
           .insert(templateData);
         
         if (error) throw error;
-        alert('Template created successfully');
+        if (toast) {
+          toast({ title: 'Template created successfully' });
+        } else {
+          alert('Template created successfully');
+        }
       } else {
         // Update existing template
         const { error } = await supabaseClient
@@ -428,7 +438,11 @@ export default function EmailTemplateManager({
           .eq('id', selectedTemplate.id);
         
         if (error) throw error;
-        alert('Template updated successfully');
+        if (toast) {
+          toast({ title: 'Template updated successfully' });
+        } else {
+          alert('Template updated successfully');
+        }
       }
 
       setIsEditing(false);
@@ -436,7 +450,15 @@ export default function EmailTemplateManager({
       setSelectedTemplate(null);
       loadTemplates();
     } catch (err: any) {
-      alert(`Error saving template: ${err.message}`);
+      if (toast) {
+        toast({ 
+          title: 'Error saving template', 
+          description: err.message,
+          variant: 'destructive' 
+        });
+      } else {
+        alert(`Error saving template: ${err.message}`);
+      }
     }
   };
 
@@ -521,7 +543,7 @@ export default function EmailTemplateManager({
             <Input
               placeholder="Search templates..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -576,8 +598,8 @@ export default function EmailTemplateManager({
                   <tr className="border-b">
                     <th className="text-left p-4 font-medium">Template</th>
                     <th className="text-left p-4 font-medium">Type</th>
-                    <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">Created</th>
+                    <th className="text-left p-4 font-medium">Updated</th>
                     <th className="text-left p-4 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -597,16 +619,11 @@ export default function EmailTemplateManager({
                           {template.type.replace('_', ' ')}
                         </Badge>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">Published</Badge>
-                          {template.is_system && (
-                            <Badge variant="outline">System</Badge>
-                          )}
-                        </div>
-                      </td>
                       <td className="p-4 text-sm text-muted-foreground">
                         {formatDate(template.created_at)}
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {template.updated_at ? formatDate(template.updated_at) : '-'}
                       </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
@@ -768,7 +785,7 @@ export default function EmailTemplateManager({
                       id="name"
                       value={selectedTemplate.name}
                       disabled={!isEditing || selectedTemplate.is_system}
-                      onChange={(e) => setSelectedTemplate({
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedTemplate({
                         ...selectedTemplate,
                         name: e.target.value
                       })}
@@ -780,7 +797,7 @@ export default function EmailTemplateManager({
                       id="type"
                       value={selectedTemplate.type}
                       disabled={!isEditing || selectedTemplate.is_system}
-                      onChange={(e) => setSelectedTemplate({
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedTemplate({
                         ...selectedTemplate,
                         type: e.target.value
                       })}
@@ -793,7 +810,7 @@ export default function EmailTemplateManager({
                     id="subject"
                     value={selectedTemplate.subject_template}
                     disabled={!isEditing}
-                    onChange={(e) => setSelectedTemplate({
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedTemplate({
                       ...selectedTemplate,
                       subject_template: e.target.value
                     })}
@@ -807,7 +824,7 @@ export default function EmailTemplateManager({
                     disabled={!isEditing}
                     rows={10}
                     className="font-mono text-sm"
-                    onChange={(e) => setSelectedTemplate({
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSelectedTemplate({
                       ...selectedTemplate,
                       html_body_template: e.target.value
                     })}
@@ -821,7 +838,7 @@ export default function EmailTemplateManager({
                     disabled={!isEditing}
                     rows={5}
                     className="font-mono text-sm"
-                    onChange={(e) => setSelectedTemplate({
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSelectedTemplate({
                       ...selectedTemplate,
                       text_body_template: e.target.value
                     })}
@@ -848,7 +865,7 @@ export default function EmailTemplateManager({
       )}
 
       {/* Email Send Result Dialog */}
-      <Dialog open={emailDialog.open} onOpenChange={(open) => setEmailDialog({ ...emailDialog, open })}>
+      <Dialog open={emailDialog.open} onOpenChange={(open: boolean) => setEmailDialog({ ...emailDialog, open })}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
