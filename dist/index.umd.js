@@ -415,31 +415,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let result = template;
       const eachPattern = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
       const eachMatches = Array.from(template.matchAll(eachPattern));
-      console.log("substituteVariables - Found {{#each}} loops:", eachMatches.length, eachMatches.map((m) => ({ key: m[1], content: m[2].substring(0, 50) })));
-      result = result.replace(eachPattern, (_match, arrayKey, loopContent) => {
-        console.log(`substituteVariables - Processing {{#each ${arrayKey}}}:`, {
-          arrayKey,
-          arrayValue: variables[arrayKey],
-          isArray: Array.isArray(variables[arrayKey]),
-          length: Array.isArray(variables[arrayKey]) ? variables[arrayKey].length : "N/A",
-          loopContent: loopContent.substring(0, 100)
-        });
-        const arrayValue = variables[arrayKey];
-        if (!Array.isArray(arrayValue) || arrayValue.length === 0) {
-          console.log(`substituteVariables - Skipping {{#each ${arrayKey}}} - not an array or empty`);
-          return "";
-        }
-        const itemsHtml = arrayValue.map((item) => {
-          let itemHtml = loopContent;
-          itemHtml = itemHtml.replace(/\{\{(\w+)\}\}/g, (varMatch, propKey) => {
-            const value = item[propKey] !== void 0 ? String(item[propKey] || "") : varMatch;
-            return value;
+      if (eachMatches.length > 0) {
+        console.log("substituteVariables - Found {{#each}} loops:", eachMatches.length, eachMatches.map((m) => ({ key: m[1], content: m[2].substring(0, 50) })));
+        result = result.replace(eachPattern, (_match, arrayKey, loopContent) => {
+          console.log(`substituteVariables - Processing {{#each ${arrayKey}}}:`, {
+            arrayKey,
+            arrayValue: variables[arrayKey],
+            isArray: Array.isArray(variables[arrayKey]),
+            length: Array.isArray(variables[arrayKey]) ? variables[arrayKey].length : "N/A",
+            loopContent: loopContent.substring(0, 100)
           });
-          return itemHtml;
-        }).join("");
-        console.log(`substituteVariables - {{#each ${arrayKey}}} result:`, itemsHtml.substring(0, 200));
-        return itemsHtml;
-      });
+          const arrayValue = variables[arrayKey];
+          if (!Array.isArray(arrayValue) || arrayValue.length === 0) {
+            console.log(`substituteVariables - Skipping {{#each ${arrayKey}}} - not an array or empty`);
+            return "";
+          }
+          const itemsHtml = arrayValue.map((item) => {
+            let itemHtml = loopContent;
+            itemHtml = itemHtml.replace(/\{\{(\w+)\}\}/g, (varMatch, propKey) => {
+              const value = item[propKey] !== void 0 ? String(item[propKey] || "") : varMatch;
+              return value;
+            });
+            return itemHtml;
+          }).join("");
+          console.log(`substituteVariables - {{#each ${arrayKey}}} result:`, itemsHtml.substring(0, 200));
+          return itemsHtml;
+        });
+      }
       result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, variableName, content) => {
         const value = variables[variableName];
         if (value && value !== "" && value !== "false" && value !== "0") {
@@ -684,7 +686,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   async function gatherLessonCompletedVariables(supabaseClient, event) {
     var _a;
     try {
-      const { data: user } = await supabaseClient.from("profiles").select("full_name, email").eq("id", event.user_id).single();
+      const { data: user } = await supabaseClient.from("profiles").select("full_name, username").eq("id", event.user_id).single();
       const { data: lesson } = await supabaseClient.from("lessons").select("title, description").eq("id", event.lesson_id).single();
       let track = null;
       let progress = null;
@@ -717,7 +719,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const trackProgressPercentage = totalLessons > 0 ? Math.round(lessonsCompleted / totalLessons * 100) : 0;
       return {
         user_name: (user == null ? void 0 : user.full_name) || "User",
-        user_email: (user == null ? void 0 : user.email) || "",
+        user_email: (user == null ? void 0 : user.username) || "",
         lesson_title: (lesson == null ? void 0 : lesson.title) || "Lesson",
         lesson_description: (lesson == null ? void 0 : lesson.description) || "",
         learning_track_title: (track == null ? void 0 : track.title) || "",
@@ -1094,7 +1096,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     PopoverContent,
     PopoverTrigger,
     isSuperAdmin = false,
-    gatherTemplateVariables
+    gatherTemplateVariables,
+    toast
   }) {
     const [templates, setTemplates] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
@@ -1119,7 +1122,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     `;
       document.head.appendChild(style);
-      return () => document.head.removeChild(style);
+      return () => {
+        if (document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
+      };
     }, []);
     React.useEffect(() => {
       loadTemplates();
@@ -1328,18 +1335,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (isCreating) {
           const { error: error2 } = await supabaseClient.from("email_templates").insert(templateData);
           if (error2) throw error2;
-          alert("Template created successfully");
+          if (toast) {
+            toast({ title: "Template created successfully" });
+          } else {
+            alert("Template created successfully");
+          }
         } else {
           const { error: error2 } = await supabaseClient.from("email_templates").update(templateData).eq("id", selectedTemplate.id);
           if (error2) throw error2;
-          alert("Template updated successfully");
+          if (toast) {
+            toast({ title: "Template updated successfully" });
+          } else {
+            alert("Template updated successfully");
+          }
         }
         setIsEditing(false);
         setIsCreating(false);
         setSelectedTemplate(null);
         loadTemplates();
       } catch (err) {
-        alert(`Error saving template: ${err.message}`);
+        if (toast) {
+          toast({
+            title: "Error saving template",
+            description: err.message,
+            variant: "destructive"
+          });
+        } else {
+          alert(`Error saving template: ${err.message}`);
+        }
       }
     };
     const filteredTemplates = templates.filter((template) => {
@@ -1441,8 +1464,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         /* @__PURE__ */ jsxRuntime.jsx("thead", { children: /* @__PURE__ */ jsxRuntime.jsxs("tr", { className: "border-b", children: [
           /* @__PURE__ */ jsxRuntime.jsx("th", { className: "text-left p-4 font-medium", children: "Template" }),
           /* @__PURE__ */ jsxRuntime.jsx("th", { className: "text-left p-4 font-medium", children: "Type" }),
-          /* @__PURE__ */ jsxRuntime.jsx("th", { className: "text-left p-4 font-medium", children: "Status" }),
           /* @__PURE__ */ jsxRuntime.jsx("th", { className: "text-left p-4 font-medium", children: "Created" }),
+          /* @__PURE__ */ jsxRuntime.jsx("th", { className: "text-left p-4 font-medium", children: "Updated" }),
           /* @__PURE__ */ jsxRuntime.jsx("th", { className: "text-left p-4 font-medium", children: "Actions" })
         ] }) }),
         /* @__PURE__ */ jsxRuntime.jsx("tbody", { children: filteredTemplates.map((template) => /* @__PURE__ */ jsxRuntime.jsxs("tr", { className: "border-b hover:bg-gray-50", children: [
@@ -1451,11 +1474,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             /* @__PURE__ */ jsxRuntime.jsx("div", { className: "text-sm text-muted-foreground", children: template.subject_template })
           ] }) }),
           /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsx(Badge, { className: getTypeColor(template.type), children: template.type.replace("_", " ") }) }),
-          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntime.jsx(Badge, { variant: "secondary", children: "Published" }),
-            template.is_system && /* @__PURE__ */ jsxRuntime.jsx(Badge, { variant: "outline", children: "System" })
-          ] }) }),
           /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4 text-sm text-muted-foreground", children: formatDate(template.created_at) }),
+          /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4 text-sm text-muted-foreground", children: template.updated_at ? formatDate(template.updated_at) : "-" }),
           /* @__PURE__ */ jsxRuntime.jsx("td", { className: "p-4", children: /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxRuntime.jsx(
               Button,
