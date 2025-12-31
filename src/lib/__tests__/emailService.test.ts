@@ -40,7 +40,7 @@ const createSupabaseStub = (options: {
 
   return {
     from: jest.fn((table: string) => {
-      if (table === 'notification_preferences') {
+      if (table === 'email_preferences') {
         return preferenceQuery;
       }
       if (table === 'email_templates') {
@@ -82,7 +82,7 @@ describe('EmailService preference handling', () => {
     expect(result.skipped).toBe(true);
     expect(result.success).toBe(false);
     expect(result.skipReason).toBe('email_disabled');
-    expect(supabase.from).toHaveBeenCalledWith('notification_preferences');
+    expect(supabase.from).toHaveBeenCalledWith('email_preferences');
     expect(supabase.from).not.toHaveBeenCalledWith('email_templates');
   });
 
@@ -119,7 +119,7 @@ describe('EmailService preference handling', () => {
     expect(result.success).toBe(true);
     expect(result.messageId).toBe('abc123');
     expect(result.skipped).toBeFalsy();
-    expect(supabase.from).toHaveBeenCalledWith('notification_preferences');
+    expect(supabase.from).toHaveBeenCalledWith('email_preferences');
     expect(supabase.from).toHaveBeenCalledWith('email_templates');
     expect(sendEmailSpy).toHaveBeenCalledTimes(1);
 

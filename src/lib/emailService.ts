@@ -396,7 +396,7 @@ export class EmailService {
   ): Promise<{ allow: boolean; reason?: string }> {
     try {
       const { data, error } = await supabaseClient
-        .from('notification_preferences')
+        .from('email_preferences')
         .select('email_enabled, types, quiet_hours')
         .eq('user_id', userId)
         .maybeSingle();

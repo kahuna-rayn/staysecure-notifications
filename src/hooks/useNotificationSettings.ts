@@ -18,7 +18,7 @@ export const useNotificationSettings = (userId: string): UseNotificationSettings
     queryKey: ['notification-preferences', userId],
     queryFn: async (): Promise<NotificationPreferences> => {
       const { data, error } = await supabase
-        .from('notification_preferences')
+        .from('email_preferences')
         .select('*')
         .eq('user_id', userId)
         .single();
@@ -43,7 +43,7 @@ export const useNotificationSettings = (userId: string): UseNotificationSettings
   const updatePreferencesMutation = useMutation({
     mutationFn: async (newPreferences: Partial<NotificationPreferences>): Promise<void> => {
       const { error } = await supabase
-        .from('notification_preferences')
+        .from('email_preferences')
         .upsert({
           user_id: userId,
           ...newPreferences,
@@ -81,7 +81,7 @@ export const useNotificationSettings = (userId: string): UseNotificationSettings
       };
 
       const { error } = await supabase
-        .from('notification_preferences')
+        .from('email_preferences')
         .upsert({
           user_id: userId,
           types: updatedTypes,
@@ -136,7 +136,7 @@ const createDefaultPreferences = async (userId: string): Promise<NotificationPre
   };
 
   const { error } = await supabase
-    .from('notification_preferences')
+    .from('email_preferences')
     .insert({
       user_id: userId,
       email_enabled: defaultPreferences.emailEnabled,

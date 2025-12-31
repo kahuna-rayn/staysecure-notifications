@@ -628,7 +628,7 @@ const _EmailService = class _EmailService {
   }
   async checkEmailPreferences(supabaseClient, userId, notificationType) {
     try {
-      const { data, error } = await supabaseClient.from("notification_preferences").select("email_enabled, types, quiet_hours").eq("user_id", userId).maybeSingle();
+      const { data, error } = await supabaseClient.from("email_preferences").select("email_enabled, types, quiet_hours").eq("user_id", userId).maybeSingle();
       if (error) {
         console.error("Failed to load notification preferences:", error);
         return { allow: true };
@@ -3836,7 +3836,7 @@ const useNotificationSettings = (userId) => {
   } = useQuery({
     queryKey: ["notification-preferences", userId],
     queryFn: async () => {
-      const { data, error: error2 } = await supabase.from("notification_preferences").select("*").eq("user_id", userId).single();
+      const { data, error: error2 } = await supabase.from("email_preferences").select("*").eq("user_id", userId).single();
       if (error2) {
         if (error2.code === "PGRST116") {
           return createDefaultPreferences(userId);
@@ -3852,7 +3852,7 @@ const useNotificationSettings = (userId) => {
   });
   const updatePreferencesMutation = useMutation({
     mutationFn: async (newPreferences) => {
-      const { error: error2 } = await supabase.from("notification_preferences").upsert({
+      const { error: error2 } = await supabase.from("email_preferences").upsert({
         user_id: userId,
         ...newPreferences,
         updated_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -3879,7 +3879,7 @@ const useNotificationSettings = (userId) => {
           [method]: enabled
         }
       };
-      const { error: error2 } = await supabase.from("notification_preferences").upsert({
+      const { error: error2 } = await supabase.from("email_preferences").upsert({
         user_id: userId,
         types: updatedTypes,
         updated_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -3921,7 +3921,7 @@ const createDefaultPreferences = async (userId) => {
     },
     frequency: "immediate"
   };
-  const { error } = await supabase.from("notification_preferences").insert({
+  const { error } = await supabase.from("email_preferences").insert({
     user_id: userId,
     email_enabled: defaultPreferences.emailEnabled,
     push_enabled: defaultPreferences.pushEnabled,
