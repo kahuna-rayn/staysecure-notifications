@@ -3,12 +3,13 @@ export { EmailNotifications } from './components/EmailNotifications';
 // Old lesson reminder components removed - functionality consolidated into EmailNotifications
 export { default as EmailTemplateManager } from './components/EmailTemplateManager';
 export { default as RecentEmailNotifications } from './components/RecentEmailNotifications';
-export { NotificationCenter } from './components/NotificationCenter';
-export { NotificationItem } from './components/NotificationItem';
-export { NotificationSettings } from './components/NotificationSettings';
+// REMOVE these legacy exports:
+//export { NotificationCenter } from './components/NotificationCenter';
+//export { NotificationItem } from './components/NotificationItem';
+//export { NotificationSettings } from './components/NotificationSettings';
 
 // Hooks
-export { useNotificationSettings } from './hooks/useNotificationSettings';
+//export { useNotificationSettings } from './hooks/useNotificationSettings';
 export { useNotifications } from './hooks/useNotifications';
 
 // Types

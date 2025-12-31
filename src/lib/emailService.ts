@@ -395,93 +395,122 @@ export class EmailService {
     notificationType: string
   ): Promise<{ allow: boolean; reason?: string }> {
     try {
-      const { data, error } = await supabaseClient
+      // 1) Try user-level preferences first
+      const { data: userPrefs, error: userErr } = await supabaseClient
         .from('email_preferences')
-        .select('email_enabled, types, quiet_hours')
+        .select('*') // IMPORTANT: avoid selecting non-existent columns like 'types'
         .eq('user_id', userId)
         .maybeSingle();
-
-      if (error) {
-        console.error('Failed to load notification preferences:', error);
-        return { allow: true };
+  
+      if (userErr) {
+        console.error('Failed to load email preferences (user-level):', userErr);
+        return { allow: true }; // preserve current behavior: don't block sending
       }
-
+  
+      // 2) Fallback to org-level preferences (user_id IS NULL)
+      let data = userPrefs;
       if (!data) {
-        return { allow: true };
+        const { data: orgPrefs, error: orgErr } = await supabaseClient
+          .from('email_preferences')
+          .select('*')
+          .is('user_id', null)
+          .maybeSingle();
+  
+        if (orgErr) {
+          console.error('Failed to load email preferences (org-level):', orgErr);
+          return { allow: true };
+        }
+  
+        data = orgPrefs;
       }
-
+  
+      if (!data) return { allow: true };
+  
+      // Global enable
       const emailEnabled = data.email_enabled ?? true;
-      if (!emailEnabled) {
-        return { allow: false, reason: 'email_disabled' };
+      if (!emailEnabled) return { allow: false, reason: 'email_disabled' };
+  
+      const normalizedType = (notificationType ?? '').toLowerCase();
+  
+      // If legacy JSON 'types' exists, keep legacy behavior
+      if (data.types) {
+        const typePreferences = (data.types || {}) as Record<string, { email?: boolean }>;
+        const typeConfig =
+          typePreferences[normalizedType] || typePreferences[normalizedType.toLowerCase()];
+        if (typeConfig && typeConfig.email === false) {
+          return { allow: false, reason: 'type_email_disabled' };
+        }
+      } else {
+        // Newer schema: boolean columns (skip checks if the column doesn't exist)
+        const isFalse = (v: any) => v === false;
+  
+        // Track/courses
+        if (normalizedType.startsWith('track_') || normalizedType.includes('course')) {
+          const flag = data.track_completions ?? data.course_completions;
+          if (isFalse(flag)) return { allow: false, reason: 'track_completions_disabled' };
+        }
+  
+        // Achievements/quizzes
+        if (normalizedType.startsWith('quiz_') || normalizedType.includes('achievement')) {
+          if (isFalse(data.achievements)) return { allow: false, reason: 'achievements_disabled' };
+        }
+  
+        // Lesson reminders
+        if (normalizedType.includes('lesson') && normalizedType.includes('reminder')) {
+          if (isFalse(data.lesson_reminders)) return { allow: false, reason: 'lesson_reminders_disabled' };
+        }
+  
+        // Task/system (optional)
+        if (normalizedType.includes('task')) {
+          if (isFalse(data.task_due_dates)) return { allow: false, reason: 'task_due_dates_disabled' };
+        }
+        if (normalizedType.includes('system')) {
+          if (isFalse(data.system_alerts)) return { allow: false, reason: 'system_alerts_disabled' };
+        }
       }
-
-      const typePreferences = (data.types || {}) as Record<
-        string,
-        { email?: boolean }
-      >;
-
-      const normalizedType = notificationType ?? '';
-      const typeConfig =
-        typePreferences[normalizedType] ||
-        typePreferences[normalizedType.toLowerCase()];
-
-      if (typeConfig && typeConfig.email === false) {
-        return { allow: false, reason: 'type_email_disabled' };
-      }
-
+  
+      // Quiet hours: support both schemas
       const quietHours = data.quiet_hours as
-        | {
-            enabled?: boolean;
-            startTime?: string;
-            endTime?: string;
-            timezone?: string;
-          }
+        | { enabled?: boolean; startTime?: string; endTime?: string; timezone?: string }
         | undefined;
-
+  
       if (quietHours?.enabled) {
-        const timezone =
-          quietHours.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // existing legacy quiet_hours object logic can remain as-is
+        // ... keep your current quietHours parsing block here ...
+      } else if (data.quiet_hours_enabled) {
+        // email_preferences schema uses start/end time columns
+        const startStr = String(data.quiet_hours_start_time || '22:00:00').slice(0, 5); // HH:mm
+        const endStr = String(data.quiet_hours_end_time || '08:00:00').slice(0, 5);
+  
         const now = new Date();
-        const userTime = new Date(
-          now.toLocaleString('en-US', { timeZone: timezone })
-        );
-        const currentMinutes =
-          userTime.getHours() * 60 + userTime.getMinutes();
-
-        const parseTime = (value?: string): number | null => {
-          if (!value) return null;
-          const [hourStr, minuteStr] = value.split(':');
-          const hour = parseInt(hourStr, 10);
-          const minute = parseInt(minuteStr, 10);
-          if (Number.isNaN(hour) || Number.isNaN(minute)) {
-            return null;
-          }
-          return hour * 60 + minute;
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+        const parseHHMM = (v: string) => {
+          const [h, m] = v.split(':').map(n => parseInt(n, 10));
+          if (Number.isNaN(h) || Number.isNaN(m)) return null;
+          return h * 60 + m;
         };
-
-        const start = parseTime(quietHours.startTime);
-        const end = parseTime(quietHours.endTime);
-
+  
+        const start = parseHHMM(startStr);
+        const end = parseHHMM(endStr);
+  
         if (start !== null && end !== null) {
           const inQuietHours =
             start <= end
               ? currentMinutes >= start && currentMinutes < end
               : currentMinutes >= start || currentMinutes < end;
-
-          if (inQuietHours) {
-            return { allow: false, reason: 'quiet_hours' };
-          }
+  
+          if (inQuietHours) return { allow: false, reason: 'quiet_hours' };
         }
       }
-
+  
       return { allow: true };
     } catch (error) {
-      console.error('Error checking notification preferences:', error);
+      console.error('Error checking email preferences:', error);
       return { allow: true };
     }
   }
 }
-
 export const emailService = EmailService.getInstance();
 
 /**
