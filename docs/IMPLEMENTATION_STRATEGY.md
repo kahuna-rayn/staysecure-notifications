@@ -33,7 +33,7 @@
 
 | Type | Mechanism | Template | Status |
 |------|-----------|----------|--------|
-| **Manager Notification** | Cron Job | `manager_employee_incomplete` | Template ready, needs wiring |
+| **Manager Notification** | Cron Job | `manager_employee_incomplete` | ✅ Implemented (cooldown-based) |
 | **Track Completion (100%)** | Direct Call | `track_completed` | Certificate exists, no email |
 | **Certificate Earned** | Direct Call | `certificate_earned` | Certificate exists, no email |
 
@@ -532,16 +532,16 @@ if (!shouldSend?.should_send) {
 }
 ```
 
-#### 2. Manager Notification System ⚠️
-**Status**: Template created (`manager_employee_incomplete`), but not wired up
+#### 2. Manager Notification System ✅
+**Status**: Implemented
 
-**Required**:
-- Cron job to check `lesson_reminder_counts.reminder_count >= max_reminder_attempts`
-- Query manager from `profiles.manager` FK
-- Send manager notification with incomplete lessons list
-- Add `manager_notified` column to `lesson_reminder_counts` (currently missing)
+**Implementation**:
+- Edge Function: `process-scheduled-notifications` in `learn/supabase/functions/`
+- Template: `manager_employee_incomplete`
+- Cooldown: 120 hours (5 days) default, configurable via `MANAGER_NOTIFICATION_COOLDOWN_HOURS`
+- Duplicate prevention: Uses `notification_history` table instead of `manager_notified` column
 
-**Mechanism**: Cron job (NOT trigger) - runs after reminder cron job
+**Mechanism**: Cron job → Edge Function (cooldown-based, no `manager_notified` column needed)
 
 #### 3. Certificate Expiration Reminders ❌
 **Status**: Not implemented
@@ -586,11 +586,10 @@ See table above for complete list. Priority items:
    - Test that notifications respect user preferences
    - Verify quiet hours are respected
 
-2. **Implement manager notifications**
-   - Add `manager_notified` column to `lesson_reminder_counts`
-   - Create cron job to check for users needing manager notifications
-   - Create Edge Function to process and send
-   - Test end-to-end
+2. ~~**Implement manager notifications**~~ ✅ **DONE**
+   - ~~Add `manager_notified` column~~ → Using cooldown-based approach via `notification_history` instead
+   - Edge Function `process-scheduled-notifications` implemented
+   - Cooldown: 120 hours (configurable via env var)
 
 3. **Certificate expiration reminders**
    - Create email template

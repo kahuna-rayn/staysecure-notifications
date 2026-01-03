@@ -104,10 +104,10 @@ See `DOCUMENTATION_REVIEW.md` for details on what was archived and why.
    - Update `sendNotification.ts` to call `should_send_notification()` before sending
    - See `IMPLEMENTATION_STRATEGY.md` for details
 
-2. ⚠️ **Implement manager notifications**
-   - Template exists (`manager_employee_incomplete`)
-   - Needs cron job and Edge Function
-   - See `IMPLEMENTATION_STRATEGY.md` for details
+2. ✅ **Manager notifications** - IMPLEMENTED
+   - Template: `manager_employee_incomplete`
+   - Edge Function: `process-scheduled-notifications`
+   - Cooldown: 120 hours (5 days) between notifications per manager
 
 3. ⚠️ **Implement certificate expiration reminders**
    - Template needs to be created

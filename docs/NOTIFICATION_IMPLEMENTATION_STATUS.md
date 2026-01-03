@@ -174,18 +174,20 @@ CREATE TABLE lesson_reminder_history (
 );
 
 -- Counts reminder attempts (for max_reminder_attempts check)
--- NOTE: Actual schema doesn't have manager_notified column yet - needs to be added
 CREATE TABLE lesson_reminder_counts (
   user_id uuid NOT NULL,
   lesson_id uuid NOT NULL,
   learning_track_id uuid NOT NULL,
   reminder_count integer DEFAULT 0,
   last_reminder_sent_at timestamp with time zone,
-  -- manager_notified boolean DEFAULT false,  -- TODO: Add this column
   PRIMARY KEY (user_id, lesson_id),
   FOREIGN KEY (user_id) REFERENCES auth.users(id),
   FOREIGN KEY (lesson_id) REFERENCES lessons(id)
 );
+
+-- NOTE: manager_notified column is NOT needed - we use a cooldown mechanism instead.
+-- The Edge Function checks notification_history for recent sends within the cooldown window
+-- (default: 120 hours / 5 days, configurable via MANAGER_NOTIFICATION_COOLDOWN_HOURS env var)
 ```
 
 **How Cron Jobs Respect `email_preferences` Settings:**
@@ -226,34 +228,26 @@ WHERE
   AND EXTRACT(HOUR FROM NOW()) = EXTRACT(HOUR FROM ep.reminder_time);
 ```
 
-**For Manager Notifications:**
+**For Manager Notifications (✅ IMPLEMENTED):**
+
+Manager notifications use a **cooldown-based approach** instead of a `manager_notified` column:
+
+1. Edge Function: `process-scheduled-notifications`
+2. Checks `notification_history` for recent sends to that manager
+3. Default cooldown: 120 hours (5 days) - configurable via `MANAGER_NOTIFICATION_COOLDOWN_HOURS`
+4. If cooldown active → skips with `skip_reason: cooldown_active_120h`
+5. If cooldown expired → sends email and records in `notification_history`
+
 ```sql
--- Query to find users needing manager notifications:
-SELECT 
-  lrc.user_id,
-  lrc.lesson_id,
-  lrc.reminder_count,
-  ep.max_reminder_attempts,
-  p.manager as manager_id,
-  mgr.full_name as manager_name,
-  mgr.email as manager_email
-FROM lesson_reminder_counts lrc
-INNER JOIN email_preferences ep ON ep.user_id = lrc.user_id
-INNER JOIN profiles p ON p.id = lrc.user_id
-INNER JOIN profiles mgr ON mgr.id = p.manager
-WHERE 
-  -- Lesson is still incomplete
-  NOT EXISTS (
-    SELECT 1 FROM user_lesson_progress ulp 
-    WHERE ulp.user_id = lrc.user_id AND ulp.lesson_id = lrc.lesson_id 
-    AND ulp.completed_at IS NOT NULL
-  )
-  -- Has reached max reminder attempts
-  AND lrc.reminder_count >= COALESCE(ep.max_reminder_attempts, 3)
-  -- Manager notification not yet sent
-  -- AND lrc.manager_notified = false  -- TODO: Add column first
-  -- Manager exists
-  AND p.manager IS NOT NULL;
+-- The Edge Function queries notification_history instead of a boolean column:
+SELECT id, sent_at FROM notification_history
+WHERE user_id = :manager_id
+  AND rule_id = :rule_id
+  AND status = 'sent'
+  AND sent_at >= NOW() - INTERVAL '120 hours'
+LIMIT 1;
+-- If result exists → skip (cooldown active)
+-- If no result → proceed with notification
 ```
 
 **Pros:**
@@ -338,19 +332,20 @@ Based on `email_preferences` table columns, here are the notification types that
    - Uses: `reminder_days_before`, `reminder_time`, `include_upcoming_lessons`, `upcoming_days_ahead`
    - Status: ✅ Working
 
-2. ⚠️ **Manager Notification - Employee Incomplete** (`max_reminder_attempts`, `reminder_frequency_days`)
-   - Template: `manager_employee_incomplete` - ✅ **Migration created**
-   - **Mechanism**: Cron job (NOT trigger) - runs after reminder cron job
+2. ✅ **Manager Notification - Employee Incomplete** (`max_reminder_attempts`, `reminder_frequency_days`)
+   - Template: `manager_employee_incomplete` - ✅ **Created**
+   - Edge Function: `process-scheduled-notifications` - ✅ **Implemented**
+   - **Mechanism**: Cron job → Edge Function
    - **How it works**:
-     1. Cron job `send-lesson-reminders` runs daily at `reminder_time` (from email_preferences)
-     2. Sends reminders, tracks attempts in `lesson_reminder_history`
-     3. Cron job `check-manager-notifications` runs after reminders
-     4. Queries users where `attempt_count >= max_reminder_attempts` AND `manager_notified = false`
-     5. For each user, finds manager via `profiles.manager` FK
-     6. Sends manager notification with incomplete lessons list
-     7. Sets `manager_notified = true` to prevent duplicate notifications
+     1. Cron job calls `process-scheduled-notifications` Edge Function
+     2. Edge Function finds employees with incomplete lessons after max reminders
+     3. Groups employees by manager
+     4. Checks `notification_history` for cooldown (default: 120 hours / 5 days)
+     5. If cooldown expired, sends manager notification with incomplete lessons list
+     6. Records in `notification_history` to prevent duplicates
    - **Variables**: `manager_name`, `employee_name`, `employee_email`, `reminder_attempts`, `incomplete_lessons[]`, `total_incomplete_count`
-   - **Status**: ⚠️ Template created, cron job + Edge Function implementation needed
+   - **Cooldown**: Configurable via `MANAGER_NOTIFICATION_COOLDOWN_HOURS` env var (default: 120h)
+   - **Status**: ✅ **IMPLEMENTED**
 
 3. ❌ **Task Due Reminders** (`task_due_dates`)
    - Template: `assignment_due` or `task_due_reminder`
