@@ -311,18 +311,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const eachPattern = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
       const eachMatches = Array.from(template.matchAll(eachPattern));
       if (eachMatches.length > 0) {
-        console.log("substituteVariables - Found {{#each}} loops:", eachMatches.length, eachMatches.map((m) => ({ key: m[1], content: m[2].substring(0, 50) })));
         result = result.replace(eachPattern, (_match, arrayKey, loopContent) => {
-          console.log(`substituteVariables - Processing {{#each ${arrayKey}}}:`, {
-            arrayKey,
-            arrayValue: variables[arrayKey],
-            isArray: Array.isArray(variables[arrayKey]),
-            length: Array.isArray(variables[arrayKey]) ? variables[arrayKey].length : "N/A",
-            loopContent: loopContent.substring(0, 100)
-          });
           const arrayValue = variables[arrayKey];
           if (!Array.isArray(arrayValue) || arrayValue.length === 0) {
-            console.log(`substituteVariables - Skipping {{#each ${arrayKey}}} - not an array or empty`);
             return "";
           }
           const itemsHtml = arrayValue.map((item) => {
@@ -333,7 +324,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             });
             return itemHtml;
           }).join("");
-          console.log(`substituteVariables - {{#each ${arrayKey}}} result:`, itemsHtml.substring(0, 200));
           return itemsHtml;
         });
       }
@@ -511,11 +501,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const { error } = await supabaseClient.from("notification_history").update(updateData).eq("id", notificationId);
         if (error) {
           console.error("Failed to update notification status:", error);
-        } else {
-          console.log(`Notification ${notificationId} status updated to ${status}`);
-          if (status === "sent") {
-            console.log("⏱️ Status update completed - check Recent tab now!");
-          }
         }
       } catch (error) {
         console.error("Error updating notification status:", error);
@@ -1488,18 +1473,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     {
                       className: "p-4 prose max-w-none",
                       dangerouslySetInnerHTML: {
-                        __html: loadingPreview ? "<div>Loading preview...</div>" : previewVariables ? (() => {
-                          console.log("Preview - calling substituteVariables with:", {
-                            template: selectedTemplate.html_body_template.substring(0, 200) + "...",
-                            variables: {
-                              ...previewVariables,
-                              incomplete_lessons: Array.isArray(previewVariables.incomplete_lessons) ? `Array(${previewVariables.incomplete_lessons.length})` : previewVariables.incomplete_lessons
-                            }
-                          });
-                          const result = emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables);
-                          console.log("Preview - substituteVariables result:", result.substring(0, 500) + "...");
-                          return result;
-                        })() : "<div>Error loading preview variables</div>"
+                        __html: loadingPreview ? "<div>Loading preview...</div>" : previewVariables ? emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables) : "<div>Error loading preview variables</div>"
                       }
                     }
                   ) })

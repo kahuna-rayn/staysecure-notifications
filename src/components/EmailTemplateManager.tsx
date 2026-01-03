@@ -740,21 +740,7 @@ export default function EmailTemplateManager({
                             __html: loadingPreview ? (
                               '<div>Loading preview...</div>'
                             ) : previewVariables ? (
-                              (() => {
-                                // Debug: log what we're passing to substituteVariables
-                                console.log('Preview - calling substituteVariables with:', {
-                                  template: selectedTemplate.html_body_template.substring(0, 200) + '...',
-                                  variables: {
-                                    ...previewVariables,
-                                    incomplete_lessons: Array.isArray(previewVariables.incomplete_lessons) 
-                                      ? `Array(${previewVariables.incomplete_lessons.length})` 
-                                      : previewVariables.incomplete_lessons
-                                  }
-                                });
-                                const result = emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables);
-                                console.log('Preview - substituteVariables result:', result.substring(0, 500) + '...');
-                                return result;
-                              })()
+                              emailService.substituteVariables(selectedTemplate.html_body_template, previewVariables)
                             ) : (
                               '<div>Error loading preview variables</div>'
                             )

@@ -85,20 +85,9 @@ export class EmailService {
     
     // Only process loops if they actually exist in the template
     if (eachMatches.length > 0) {
-      console.log('substituteVariables - Found {{#each}} loops:', eachMatches.length, eachMatches.map(m => ({ key: m[1], content: m[2].substring(0, 50) })));
-      
       result = result.replace(eachPattern, (_match, arrayKey, loopContent) => {
-        console.log(`substituteVariables - Processing {{#each ${arrayKey}}}:`, {
-          arrayKey,
-          arrayValue: variables[arrayKey],
-          isArray: Array.isArray(variables[arrayKey]),
-          length: Array.isArray(variables[arrayKey]) ? variables[arrayKey].length : 'N/A',
-          loopContent: loopContent.substring(0, 100)
-        });
-        
         const arrayValue = variables[arrayKey];
         if (!Array.isArray(arrayValue) || arrayValue.length === 0) {
-          console.log(`substituteVariables - Skipping {{#each ${arrayKey}}} - not an array or empty`);
           return ''; // Hide loop if array is empty or not an array
         }
         
@@ -114,7 +103,6 @@ export class EmailService {
           return itemHtml;
         }).join('');
         
-        console.log(`substituteVariables - {{#each ${arrayKey}}} result:`, itemsHtml.substring(0, 200));
         return itemsHtml;
       });
     }
@@ -377,12 +365,6 @@ export class EmailService {
 
       if (error) {
         console.error('Failed to update notification status:', error);
-      } else {
-        console.log(`Notification ${notificationId} status updated to ${status}`);
-        // Add delay for testing visibility
-        if (status === 'sent') {
-          console.log('⏱️ Status update completed - check Recent tab now!');
-        }
       }
     } catch (error) {
       console.error('Error updating notification status:', error);
