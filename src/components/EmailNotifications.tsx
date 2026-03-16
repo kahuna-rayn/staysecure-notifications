@@ -36,11 +36,11 @@ interface EmailPreferences {
   id?: string;
   userId?: string; // NULL for org-level, user UUID for user-level
   emailEnabled: boolean;
-  taskDueDates: boolean;
-  systemAlerts: boolean;
   achievements: boolean;
   trackCompletions: boolean;
   lessonReminders: boolean;
+  documentNotifications: boolean;
+  documentCompletedManager: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -97,7 +97,7 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
         .from('email_preferences')
         .select('*')
         .is('user_id', null)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error loading preferences:', error);
@@ -110,11 +110,11 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
           id: data.id,
           userId: data.user_id, // Will be null for org-level
           emailEnabled: data.email_enabled,
-          taskDueDates: data.task_due_dates,
-          systemAlerts: data.system_alerts,
           achievements: data.achievements,
           trackCompletions: data.track_completions,
           lessonReminders: data.lesson_reminders ?? true, // Default to true if null
+          documentNotifications: data.document_notifications ?? true,
+          documentCompletedManager: data.document_completed_manager ?? true,
           quietHoursEnabled: data.quiet_hours_enabled,
           quietHoursStart: data.quiet_hours_start_time,
           quietHoursEnd: data.quiet_hours_end_time,
@@ -151,11 +151,11 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
     const dbPayload = {
       user_id: null, // Always org-level settings
       email_enabled: updatedPrefs.emailEnabled,
-      task_due_dates: updatedPrefs.taskDueDates,
-      system_alerts: updatedPrefs.systemAlerts,
       achievements: updatedPrefs.achievements,
       track_completions: updatedPrefs.trackCompletions,
       lesson_reminders: updatedPrefs.lessonReminders,
+      document_notifications: updatedPrefs.documentNotifications,
+      document_completed_manager: updatedPrefs.documentCompletedManager,
       quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
       quiet_hours_start_time: updatedPrefs.quietHoursStart,
       quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -170,11 +170,24 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
       updated_by: currentUser?.id || null,
     };
 
-    // Update the existing org-level row (user_id IS NULL)
-    const { error } = await supabase
-      .from('email_preferences')
-      .update(dbPayload)
-      .is('user_id', null);
+    // Update by id if we have one, otherwise insert (avoids upsert ON CONFLICT issues with NULL user_id)
+    let error;
+    if (preferences?.id) {
+      ({ error } = await supabase
+        .from('email_preferences')
+        .update(dbPayload)
+        .eq('id', preferences.id));
+    } else {
+      const { data: inserted, error: insertError } = await supabase
+        .from('email_preferences')
+        .insert(dbPayload)
+        .select('id')
+        .single();
+      error = insertError;
+      if (inserted?.id) {
+        setPreferences(prev => prev ? { ...prev, id: inserted.id } : prev);
+      }
+    }
 
     if (error) {
       console.error('Error updating preferences:', error);
@@ -342,64 +355,71 @@ export const EmailNotifications: React.FC<EmailNotificationsProps> = ({
                   )}
                 </div>
                 
-                {/* Task Due Dates and System Alerts */}
                 <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-left">Task Due Dates</Label>
+                  <div className="text-left">
+                    <Label>Document Assigned</Label>
+                    <p className="text-xs text-muted-foreground">Notify users when a document is assigned to them</p>
+                  </div>
                   <Switch
-                    checked={preferences?.taskDueDates || false}
-                    onCheckedChange={(checked) => updatePreferences({ taskDueDates: checked })}
+                    checked={preferences?.documentNotifications ?? true}
+                    onCheckedChange={(checked) => updatePreferences({ documentNotifications: checked })}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
-                  <Label className="text-left">System Alerts</Label>
+                  <div className="text-left">
+                    <Label>Document Completed (Manager)</Label>
+                    <p className="text-xs text-muted-foreground">Notify managers when a team member marks a document as read</p>
+                  </div>
                   <Switch
-                    checked={preferences?.systemAlerts || false}
-                    onCheckedChange={(checked) => updatePreferences({ systemAlerts: checked })}
+                    checked={preferences?.documentCompletedManager ?? true}
+                    onCheckedChange={(checked) => updatePreferences({ documentCompletedManager: checked })}
                   />
                 </div>
-                
+
               </div>
             </div>
           )}
 
           {/* Quiet Hours */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-left">
-                <Label>Quiet Hours</Label>
-                <p className="text-sm text-muted-foreground">
-                  Don't send emails during these hours
-                </p>
+          {preferences?.emailEnabled && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="text-left">
+                  <Label>Quiet Hours</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Don't send emails during these hours
+                  </p>
+                </div>
+                <Switch
+                  checked={preferences?.quietHoursEnabled || false}
+                  onCheckedChange={(checked) => updatePreferences({ quietHoursEnabled: checked })}
+                />
               </div>
-              <Switch
-                checked={preferences?.quietHoursEnabled || false}
-                onCheckedChange={(checked) => updatePreferences({ quietHoursEnabled: checked })}
-              />
-            </div>
 
-            {preferences?.quietHoursEnabled && (
-              <div className="flex items-center gap-4">
-                <div>
-                  <Label>Start Time</Label>
-                  <Input
-                    type="time"
-                    value={preferences?.quietHoursStart || '22:00'}
-                    onChange={(e) => updatePreferences({ quietHoursStart: e.target.value })}
-                  />
+              {preferences?.quietHoursEnabled && (
+                <div className="flex items-center gap-4">
+                  <div>
+                    <Label>Start Time</Label>
+                    <Input
+                      type="time"
+                      value={preferences?.quietHoursStart || '22:00'}
+                      onChange={(e) => updatePreferences({ quietHoursStart: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>End Time</Label>
+                    <Input
+                      type="time"
+                      value={preferences?.quietHoursEnd || '08:00'}
+                      onChange={(e) => updatePreferences({ quietHoursEnd: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>End Time</Label>
-                  <Input
-                    type="time"
-                    value={preferences?.quietHoursEnd || '08:00'}
-                    onChange={(e) => updatePreferences({ quietHoursEnd: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
   );

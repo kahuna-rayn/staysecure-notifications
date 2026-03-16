@@ -346,7 +346,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     // Fetch template from database
     async fetchTemplate(type, supabaseClient) {
       try {
-        const { data, error } = await supabaseClient.from("email_templates").select("*").eq("type", type).eq("is_active", true).order("system", { ascending: false }).limit(1).single();
+        const { data, error } = await supabaseClient.from("email_templates").select("*").eq("type", type).eq("is_active", true).order("is_system", { ascending: false }).limit(1).single();
         if (error) {
           console.error(`Error fetching template for type ${type}:`, error);
           return null;
@@ -679,7 +679,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }, []);
     const loadPreferences = async () => {
       try {
-        const { data, error } = await supabase2.from("email_preferences").select("*").is("user_id", null).single();
+        const { data, error } = await supabase2.from("email_preferences").select("*").is("user_id", null).maybeSingle();
         if (error) {
           console.error("Error loading preferences:", error);
           return;
@@ -690,12 +690,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             userId: data.user_id,
             // Will be null for org-level
             emailEnabled: data.email_enabled,
-            taskDueDates: data.task_due_dates,
-            systemAlerts: data.system_alerts,
             achievements: data.achievements,
             trackCompletions: data.track_completions,
             lessonReminders: data.lesson_reminders ?? true,
             // Default to true if null
+            documentNotifications: data.document_notifications ?? true,
+            documentCompletedManager: data.document_completed_manager ?? true,
             quietHoursEnabled: data.quiet_hours_enabled,
             quietHoursStart: data.quiet_hours_start_time,
             quietHoursEnd: data.quiet_hours_end_time,
@@ -728,11 +728,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         user_id: null,
         // Always org-level settings
         email_enabled: updatedPrefs.emailEnabled,
-        task_due_dates: updatedPrefs.taskDueDates,
-        system_alerts: updatedPrefs.systemAlerts,
         achievements: updatedPrefs.achievements,
         track_completions: updatedPrefs.trackCompletions,
         lesson_reminders: updatedPrefs.lessonReminders,
+        document_notifications: updatedPrefs.documentNotifications,
+        document_completed_manager: updatedPrefs.documentCompletedManager,
         quiet_hours_enabled: updatedPrefs.quietHoursEnabled,
         quiet_hours_start_time: updatedPrefs.quietHoursStart,
         quiet_hours_end_time: updatedPrefs.quietHoursEnd,
@@ -746,7 +746,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         // Audit fields
         updated_by: (currentUser == null ? void 0 : currentUser.id) || null
       };
-      const { error } = await supabase2.from("email_preferences").update(dbPayload).is("user_id", null);
+      let error;
+      if (preferences == null ? void 0 : preferences.id) {
+        ({ error } = await supabase2.from("email_preferences").update(dbPayload).eq("id", preferences.id));
+      } else {
+        const { data: inserted, error: insertError } = await supabase2.from("email_preferences").insert(dbPayload).select("id").single();
+        error = insertError;
+        if (inserted == null ? void 0 : inserted.id) {
+          setPreferences((prev) => prev ? { ...prev, id: inserted.id } : prev);
+        }
+      }
       if (error) {
         console.error("Error updating preferences:", error);
       }
@@ -902,28 +911,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ] }),
           /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "Task Due Dates" }),
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-left", children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { children: "Document Assigned" }),
+                /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-xs text-muted-foreground", children: "Notify users when a document is assigned to them" })
+              ] }),
               /* @__PURE__ */ jsxRuntime.jsx(
                 Switch,
                 {
-                  checked: (preferences == null ? void 0 : preferences.taskDueDates) || false,
-                  onCheckedChange: (checked) => updatePreferences({ taskDueDates: checked })
+                  checked: (preferences == null ? void 0 : preferences.documentNotifications) ?? true,
+                  onCheckedChange: (checked) => updatePreferences({ documentNotifications: checked })
                 }
               )
             ] }),
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntime.jsx(Label, { className: "text-left", children: "System Alerts" }),
+              /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-left", children: [
+                /* @__PURE__ */ jsxRuntime.jsx(Label, { children: "Document Completed (Manager)" }),
+                /* @__PURE__ */ jsxRuntime.jsx("p", { className: "text-xs text-muted-foreground", children: "Notify managers when a team member marks a document as read" })
+              ] }),
               /* @__PURE__ */ jsxRuntime.jsx(
                 Switch,
                 {
-                  checked: (preferences == null ? void 0 : preferences.systemAlerts) || false,
-                  onCheckedChange: (checked) => updatePreferences({ systemAlerts: checked })
+                  checked: (preferences == null ? void 0 : preferences.documentCompletedManager) ?? true,
+                  onCheckedChange: (checked) => updatePreferences({ documentCompletedManager: checked })
                 }
               )
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
+        (preferences == null ? void 0 : preferences.emailEnabled) && /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "flex items-center justify-between", children: [
             /* @__PURE__ */ jsxRuntime.jsxs("div", { className: "text-left", children: [
               /* @__PURE__ */ jsxRuntime.jsx(Label, { children: "Quiet Hours" }),
@@ -993,7 +1008,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     PopoverContent,
     PopoverTrigger,
     isSuperAdmin = false,
-    gatherTemplateVariables,
+    gatherTemplateVariables: gatherTemplateVariables2,
     toast
   }) {
     const [templates, setTemplates] = React.useState([]);
@@ -1048,7 +1063,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       setSelectedTemplate(template);
       setIsViewing(true);
       setLoadingPreview(true);
-      if (!gatherTemplateVariables) {
+      if (!gatherTemplateVariables2) {
         console.error("gatherTemplateVariables is required for preview");
         setLoadingPreview(false);
         return;
@@ -1076,7 +1091,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           context.score = 95;
         }
         const templateBody = template.html_body_template || "";
-        const variables = await gatherTemplateVariables(supabaseClient, template.type, context, templateBody);
+        const variables = await gatherTemplateVariables2(supabaseClient, template.type, context, templateBody);
         setPreviewVariables(variables);
       } catch (error2) {
         console.error("Error gathering preview variables:", error2);
@@ -1128,7 +1143,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           });
           return;
         }
-        if (!gatherTemplateVariables) {
+        if (!gatherTemplateVariables2) {
           setEmailDialog({
             open: true,
             type: "error",
@@ -1153,7 +1168,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           context.score = 95;
         }
         const templateBody = template.html_body_template || "";
-        const templateVariables = await gatherTemplateVariables(supabaseClient, template.type, context, templateBody);
+        const templateVariables = await gatherTemplateVariables2(supabaseClient, template.type, context, templateBody);
         const { data: notificationData, error: notificationError } = await supabaseClient.from("notification_history").insert({
           user_id: user.id,
           email_template_id: template.id,
@@ -1544,7 +1559,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                   id: "content",
                   value: selectedTemplate.html_body_template,
                   disabled: !isEditing,
-                  rows: 10,
+                  rows: 25,
                   className: "font-mono text-sm",
                   onChange: (e) => setSelectedTemplate({
                     ...selectedTemplate,
@@ -2006,12 +2021,420 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       refresh
     };
   };
+  async function sendNotificationByEvent(supabase2, eventType, context) {
+    try {
+      const { user_id } = context;
+      if (!user_id) {
+        console.warn(`Cannot send ${eventType} notification: no user_id provided`);
+        return;
+      }
+      const { data: profile } = await supabase2.from("profiles").select("username").eq("id", user_id).single();
+      const userEmail = profile == null ? void 0 : profile.username;
+      if (!userEmail) {
+        console.warn(`Cannot send ${eventType} notification: no email for user ${user_id}`);
+        await supabase2.from("notification_history").insert({
+          user_id,
+          trigger_event: eventType,
+          status: "skipped",
+          skip_reason: "no_email",
+          error_message: `No email found in profiles.username for user ${user_id}`,
+          template_variables: context
+        });
+        return;
+      }
+      const { data: rules, error: rulesError } = await supabase2.from("notification_rules").select("id, name, email_template_id, trigger_conditions").eq("trigger_event", eventType).eq("is_enabled", true).eq("send_immediately", true);
+      if (rulesError) {
+        console.error(`Error querying notification rules for ${eventType}:`, rulesError);
+        return;
+      }
+      if (!rules || rules.length === 0) {
+        console.debug(`[notifications] No active rules for event: ${eventType}`);
+        return;
+      }
+      for (const rule of rules) {
+        try {
+          if (rule.trigger_conditions && !checkTriggerConditions(rule.trigger_conditions, context)) {
+            console.debug(`[notifications] Trigger conditions not met for rule ${rule.name}`);
+            continue;
+          }
+          let preferences = null;
+          let preferenceSource = "organization";
+          const { data: userPrefs } = await supabase2.from("email_preferences").select("email_enabled, track_completions, achievements, lesson_reminders").eq("user_id", user_id).maybeSingle();
+          if (userPrefs) {
+            preferences = userPrefs;
+            preferenceSource = "user";
+          } else {
+            const { data: orgPrefs, error: orgPrefError } = await supabase2.from("email_preferences").select("email_enabled, track_completions, achievements, lesson_reminders").is("user_id", null).maybeSingle();
+            if (orgPrefError || !orgPrefs) {
+              console.error(`Error fetching org preferences for rule ${rule.name}:`, orgPrefError);
+              continue;
+            }
+            preferences = orgPrefs;
+          }
+          if (!preferences) {
+            console.error(`No preferences found for rule ${rule.name}`);
+            continue;
+          }
+          if (preferences.email_enabled === false) {
+            await recordNotificationHistory(supabase2, {
+              user_id,
+              rule_id: rule.id,
+              email_template_id: rule.email_template_id,
+              trigger_event: eventType,
+              status: "skipped",
+              skip_reason: `${preferenceSource}_email_disabled`
+            });
+            continue;
+          }
+          let typeEnabled = true;
+          let skipReason = "";
+          if (["lesson_completed", "track_milestone_50", "track_completed"].includes(eventType)) {
+            typeEnabled = preferences.track_completions !== false;
+            if (!typeEnabled) skipReason = `${preferenceSource}_track_completions_disabled`;
+          } else if (eventType === "quiz_high_score" || eventType.startsWith("quiz_")) {
+            typeEnabled = preferences.achievements !== false;
+            if (!typeEnabled) skipReason = `${preferenceSource}_achievements_disabled`;
+          } else if (eventType === "document_assigned") {
+            const pref = preferences.document_notifications;
+            typeEnabled = pref !== false;
+            if (!typeEnabled) skipReason = `${preferenceSource}_document_notifications_disabled`;
+          } else if (eventType === "document_completed_manager") {
+            const pref = preferences.document_completed_manager;
+            typeEnabled = pref !== false;
+            if (!typeEnabled) skipReason = `${preferenceSource}_document_completed_manager_disabled`;
+          }
+          if (!typeEnabled) {
+            await recordNotificationHistory(supabase2, {
+              user_id,
+              rule_id: rule.id,
+              email_template_id: rule.email_template_id,
+              trigger_event: eventType,
+              status: "skipped",
+              skip_reason: skipReason
+            });
+            continue;
+          }
+          const { data: template, error: templateError } = await supabase2.from("email_templates").select("id, type, subject_template, html_body_template").eq("id", rule.email_template_id).eq("is_active", true).single();
+          if (templateError || !template) {
+            console.error(`No template found for rule ${rule.name}:`, templateError);
+            continue;
+          }
+          const templateBody = template.html_body_template || "";
+          const variables = await gatherTemplateVariables(supabase2, eventType, context, templateBody);
+          const result = await emailService.sendEmailFromTemplate(
+            template.type,
+            userEmail,
+            variables,
+            supabase2,
+            { userId: user_id }
+          );
+          const historyStatus = result.skipped ? "skipped" : result.success ? "sent" : "failed";
+          await recordNotificationHistory(supabase2, {
+            user_id,
+            rule_id: rule.id,
+            email_template_id: rule.email_template_id,
+            trigger_event: eventType,
+            template_variables: variables,
+            status: historyStatus,
+            error_message: result.success || result.skipped ? null : result.error,
+            skip_reason: result.skipped ? result.skipReason : void 0,
+            sent_at: result.success ? (/* @__PURE__ */ new Date()).toISOString() : null
+          });
+          if (result.success) {
+            console.debug(`[notifications] ✅ ${eventType} sent (rule: ${rule.name})`);
+          } else if (result.skipped) {
+            console.debug(`[notifications] ⚠️ ${eventType} skipped (rule: ${rule.name}) - ${result.skipReason}`);
+          } else {
+            console.error(`[notifications] ❌ ${eventType} failed (rule: ${rule.name}):`, result.error);
+          }
+        } catch (ruleError) {
+          console.error(`Error processing rule ${rule.name}:`, ruleError);
+        }
+      }
+    } catch (error) {
+      console.error(`Error sending ${eventType} notification:`, error);
+    }
+  }
+  async function gatherTemplateVariables(supabase2, eventType, context, templateText) {
+    const clientId = context.clientId;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
+    const clientPath = clientId && clientId !== "default" ? `/${clientId}` : "";
+    const clientLoginUrl = `${origin}${clientPath}/login`;
+    if (eventType === "lesson_completed" && context.lesson_id) {
+      let variables2 = await gatherLessonCompletedVariables(supabase2, {
+        user_id: context.user_id,
+        lesson_id: context.lesson_id,
+        learning_track_id: context.learning_track_id,
+        clientId
+      });
+      variables2 = { ...variables2, client_login_url: clientLoginUrl };
+      if (templateText) {
+        variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+      }
+      return variables2;
+    }
+    if ((eventType === "track_milestone_50" || eventType === "track_completed") && context.learning_track_id) {
+      const { data: trackProgress } = await supabase2.from("user_learning_track_progress").select("progress_percentage, enrolled_at, started_at").eq("user_id", context.user_id).eq("learning_track_id", context.learning_track_id).single();
+      const { data: track } = await supabase2.from("learning_tracks").select("title").eq("id", context.learning_track_id).single();
+      const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
+      const { data: completedLessons } = await supabase2.from("user_lesson_progress").select("lesson_id").eq("user_id", context.user_id).not("completed_at", "is", null);
+      const { data: trackLessons } = await supabase2.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", context.learning_track_id);
+      const totalLessons = (trackLessons == null ? void 0 : trackLessons.length) || 0;
+      const lessonsCompletedInTrack = (completedLessons == null ? void 0 : completedLessons.filter(
+        (cl) => trackLessons == null ? void 0 : trackLessons.some((tl) => tl.lesson_id === cl.lesson_id)
+      ).length) || 0;
+      const { data: completedLessonProgress } = await supabase2.from("user_lesson_progress").select("started_at, completed_at").eq("user_id", context.user_id).not("completed_at", "is", null).in("lesson_id", (trackLessons == null ? void 0 : trackLessons.map((tl) => tl.lesson_id)) || []);
+      let timeSpentHours = 0;
+      if (completedLessonProgress) {
+        const totalMs = completedLessonProgress.reduce(
+          (sum, lp) => lp.completed_at && lp.started_at ? sum + (new Date(lp.completed_at).getTime() - new Date(lp.started_at).getTime()) : sum,
+          0
+        );
+        timeSpentHours = Math.round(totalMs / (1e3 * 60 * 60) * 10) / 10;
+      }
+      let variables2 = {
+        user_name: (profile == null ? void 0 : profile.full_name) || "User",
+        learning_track_title: (track == null ? void 0 : track.title) || "Learning Track",
+        track_progress_percentage: (trackProgress == null ? void 0 : trackProgress.progress_percentage) || 0,
+        lessons_completed_in_track: lessonsCompletedInTrack,
+        total_lessons_in_track: totalLessons,
+        time_spent_hours: timeSpentHours,
+        client_login_url: clientLoginUrl
+      };
+      if (templateText) {
+        variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+      }
+      return variables2;
+    }
+    if (eventType === "quiz_high_score" && context.lesson_id) {
+      const { data: lesson, error: lessonError } = await supabase2.from("lessons").select("id, title, lesson_type").eq("id", context.lesson_id).eq("lesson_type", "quiz").single();
+      if (lessonError || !lesson) {
+        return { user_id: context.user_id, lesson_id: context.lesson_id, score: context.score || 0, client_login_url: clientLoginUrl };
+      }
+      const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
+      let correctAnswers = context.correct_answers;
+      let totalQuestions = context.total_questions;
+      let timeTakenSeconds = context.time_taken_seconds;
+      if (correctAnswers === void 0 || totalQuestions === void 0) {
+        const { data: attempt } = await supabase2.from("quiz_attempts").select("correct_answers, total_questions").eq("user_id", context.user_id).eq("lesson_id", context.lesson_id).order("completed_at", { ascending: false }).limit(1).maybeSingle();
+        if (correctAnswers === void 0) correctAnswers = attempt == null ? void 0 : attempt.correct_answers;
+        if (totalQuestions === void 0) totalQuestions = attempt == null ? void 0 : attempt.total_questions;
+      }
+      if (correctAnswers === void 0 || correctAnswers === null) correctAnswers = 0;
+      if (totalQuestions === void 0 || totalQuestions === null) totalQuestions = 0;
+      if (timeTakenSeconds === void 0) timeTakenSeconds = 0;
+      const finalTime = timeTakenSeconds || 0;
+      const minutes = Math.floor(finalTime / 60);
+      const seconds = finalTime % 60;
+      let completionTime = "N/A";
+      if (finalTime > 0) {
+        if (minutes > 0 && seconds > 0) completionTime = `${minutes}m ${seconds}s`;
+        else if (minutes > 0) completionTime = `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+        else completionTime = `${seconds} second${seconds !== 1 ? "s" : ""}`;
+      }
+      let variables2 = {
+        user_name: (profile == null ? void 0 : profile.full_name) || "User",
+        quiz_title: lesson.title || "Quiz",
+        score: context.score || 0,
+        correct_answers: correctAnswers,
+        total_questions: totalQuestions,
+        completion_time: completionTime,
+        time_taken_seconds: finalTime,
+        time_taken_minutes: Math.round(finalTime / 60 * 10) / 10,
+        client_login_url: clientLoginUrl
+      };
+      if (templateText) {
+        variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+      }
+      return variables2;
+    }
+    if (eventType === "document_assigned") {
+      const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
+      const dueDays = context.due_days || 0;
+      const dueDate = dueDays > 0 ? (() => {
+        const d = /* @__PURE__ */ new Date();
+        d.setDate(d.getDate() + dueDays);
+        return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      })() : "No due date";
+      return {
+        user_name: (profile == null ? void 0 : profile.full_name) || "User",
+        document_title: context.document_title || "",
+        due_date: dueDate,
+        due_days: dueDays,
+        login_url: clientLoginUrl,
+        client_login_url: clientLoginUrl
+      };
+    }
+    if (eventType === "document_completed_manager") {
+      const employeeId = context.employee_user_id || context.user_id;
+      const { data: employeeProfile } = await supabase2.from("profiles").select("full_name").eq("id", employeeId).maybeSingle();
+      const { data: managerProfile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+      const completedAt = context.completed_at ? new Date(context.completed_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      return {
+        manager_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager",
+        employee_name: (employeeProfile == null ? void 0 : employeeProfile.full_name) || "Team member",
+        user_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager",
+        document_title: context.document_title || "",
+        completed_date: completedAt,
+        login_url: clientLoginUrl,
+        client_login_url: clientLoginUrl
+      };
+    }
+    if (eventType === "manager_employee_incomplete") {
+      const managerId = context.manager_id || context.user_id;
+      const { data: managerProfile } = await supabase2.from("profiles").select("full_name").eq("id", managerId).single();
+      const { data: employeeProfile } = await supabase2.from("profiles").select("full_name, username").neq("id", managerId).limit(1).single();
+      const { data: sampleLessons } = await supabase2.from("lessons").select("id, title").limit(3);
+      const incompleteLessons = (sampleLessons || []).map((l) => ({
+        lesson_title: l.title,
+        learning_track_title: "Cybersecurity Fundamentals",
+        due_date: null
+      }));
+      const employeeName = (employeeProfile == null ? void 0 : employeeProfile.full_name) || "Employee Name";
+      const employeeEmail = (employeeProfile == null ? void 0 : employeeProfile.username) || "employee@example.com";
+      let variables2 = {
+        manager_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager Name",
+        employee_name: employeeName,
+        employee_email: employeeEmail,
+        user_name: employeeName,
+        user_email: employeeEmail,
+        reminder_attempts: 3,
+        multiple_attempts: true,
+        incomplete_lessons: incompleteLessons,
+        total_incomplete_count: incompleteLessons.length,
+        client_login_url: clientLoginUrl
+      };
+      if (templateText) {
+        variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+      }
+      return variables2;
+    }
+    let variables = {
+      user_id: context.user_id,
+      client_login_url: clientLoginUrl,
+      ...context
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase2, variables, templateText, context);
+    }
+    return variables;
+  }
+  async function mergeWithLookup(supabase2, variables, templateText, context) {
+    const templateKeys = extractVariableKeys(templateText);
+    const providedKeys = new Set(Object.keys(variables));
+    const missingKeys = templateKeys.filter((key) => {
+      if (!providedKeys.has(key)) return true;
+      return !Array.isArray(variables[key]);
+    });
+    if (missingKeys.length === 0) return variables;
+    const lookedUp = await lookupTemplateVariables(supabase2, missingKeys, context.user_id);
+    return { ...lookedUp, ...variables };
+  }
+  async function lookupTemplateVariables(supabase2, variableKeys, userId) {
+    const result = {};
+    const keyPersonnelRoles = {
+      dpo_name: "dpo",
+      dpo_email: "dpo",
+      iso_name: "iso",
+      iso_email: "iso",
+      cem_name: "cem",
+      cem_email: "cem",
+      hib_name: "hib",
+      hib_email: "hib",
+      dpe_name: "dpe",
+      dpe_email: "dpe"
+    };
+    for (const key of variableKeys) {
+      try {
+        if (key === "current_date") {
+          result[key] = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+          continue;
+        }
+        if (key === "current_time") {
+          result[key] = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+          continue;
+        }
+        if (["user_name", "first_name", "last_name"].includes(key) && userId) {
+          const { data } = await supabase2.from("profiles").select("full_name, first_name, last_name").eq("id", userId).maybeSingle();
+          if (data) {
+            result["user_name"] = data.full_name || "User";
+            if (data.first_name) result["first_name"] = data.first_name;
+            if (data.last_name) result["last_name"] = data.last_name;
+          }
+          continue;
+        }
+        if (key === "org_name") {
+          const { data } = await supabase2.from("org_profile").select("org_name").maybeSingle();
+          result[key] = (data == null ? void 0 : data.org_name) || "Your Organization";
+          continue;
+        }
+        if (key in keyPersonnelRoles) {
+          const roleType = keyPersonnelRoles[key];
+          const { data } = await supabase2.from("org_sig_roles").select("signatory_name, signatory_email").eq("role_type", roleType).maybeSingle();
+          if (data) {
+            result[key] = key.endsWith("_name") ? data.signatory_name || "" : data.signatory_email || "";
+          }
+          continue;
+        }
+        const { data: variable } = await supabase2.from("template_variables").select("id").eq("key", key).maybeSingle();
+        if (variable) {
+          const { data: translation } = await supabase2.from("template_variable_translations").select("default_value").eq("variable_id", variable.id).eq("language_code", "en").maybeSingle();
+          if (translation == null ? void 0 : translation.default_value) result[key] = translation.default_value;
+        }
+      } catch (err) {
+        console.error(`[notifications] Error looking up variable "${key}":`, err);
+      }
+    }
+    return result;
+  }
+  function extractVariableKeys(template) {
+    const matches = Array.from(template.matchAll(/\{\{(\w+)\}\}/g));
+    return [...new Set(matches.map((m) => m[1]))];
+  }
+  function checkTriggerConditions(conditions, context) {
+    if (!conditions || typeof conditions !== "object") return true;
+    for (const [key, value] of Object.entries(conditions)) {
+      const ctx = context[key];
+      if (ctx === void 0 || ctx === null) return false;
+      if (typeof value === "string" && value.startsWith(">=")) {
+        if (typeof ctx !== "number" || ctx < parseFloat(value.substring(2))) return false;
+      } else if (typeof value === "string" && value.startsWith("<=")) {
+        if (typeof ctx !== "number" || ctx > parseFloat(value.substring(2))) return false;
+      } else if (typeof value === "string" && value.startsWith(">")) {
+        if (typeof ctx !== "number" || ctx <= parseFloat(value.substring(1))) return false;
+      } else if (typeof value === "string" && value.startsWith("<")) {
+        if (typeof ctx !== "number" || ctx >= parseFloat(value.substring(1))) return false;
+      } else if (value !== ctx) {
+        return false;
+      }
+    }
+    return true;
+  }
+  async function recordNotificationHistory(supabase2, data) {
+    try {
+      await supabase2.from("notification_history").insert({
+        user_id: data.user_id,
+        rule_id: data.rule_id,
+        email_template_id: data.email_template_id,
+        trigger_event: data.trigger_event,
+        template_variables: data.template_variables || {},
+        status: data.status,
+        error_message: data.error_message,
+        skip_reason: data.skip_reason,
+        sent_at: data.sent_at
+      });
+    } catch (error) {
+      console.error("[notifications] Error recording notification history:", error);
+    }
+  }
   exports2.EmailNotifications = EmailNotifications;
   exports2.EmailService = EmailService;
   exports2.EmailTemplateManager = EmailTemplateManager;
   exports2.RecentEmailNotifications = RecentEmailNotifications;
   exports2.emailService = emailService;
   exports2.gatherLessonCompletedVariables = gatherLessonCompletedVariables;
+  exports2.gatherTemplateVariables = gatherTemplateVariables;
+  exports2.sendNotificationByEvent = sendNotificationByEvent;
   exports2.useNotifications = useNotifications;
   Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
 });

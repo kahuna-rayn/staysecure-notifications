@@ -18,3 +18,5 @@ export * from './types';
 // Utils - Supabase should be provided by consuming app
 // export * from './utils/supabase';
 export * from './lib/emailService';
+export { sendNotificationByEvent, gatherTemplateVariables } from './lib/notificationService';
+export type { NotificationContext } from './lib/notificationService';

@@ -1,53 +1,44 @@
-# Notification System Documentation
+# Notification System
 
-**Last Updated**: November 6, 2025
+Template-based email notification system for the StaySecure platform. Notifications are driven by the `notification_rules` table — adding a rule row for an existing event type requires no code changes.
 
-## 📖 Quick Start
+**Last Updated**: March 2026
 
-**Start here**: [START_HERE_NOTIFICATIONS.md](./START_HERE_NOTIFICATIONS.md)
+---
 
-## 📚 Main Documentation
+## How It Works (30-second version)
 
-### Core Documents
-- **[IMPLEMENTATION_STRATEGY.md](./IMPLEMENTATION_STRATEGY.md)** - Current state, architecture, and roadmap ⭐
-- **[NOTIFICATION_IMPLEMENTATION_STATUS.md](./NOTIFICATION_IMPLEMENTATION_STATUS.md)** - Detailed implementation status
-- **[START_HERE_NOTIFICATIONS.md](./START_HERE_NOTIFICATIONS.md)** - Entry point and navigation guide
+1. Something calls `sendNotificationByEvent(supabase, 'event_type', { user_id, ...context })`
+2. The engine queries `notification_rules` for active rules matching that event type
+3. For each matching rule: checks preferences, gathers template variables, sends email, records history
+4. Template variables are resolved via `variableSubstitution.ts` — a mix of live DB lookups and static defaults
 
-### Architecture & Design
-- **[NOTIFICATION_SYSTEM_OVERVIEW.md](./NOTIFICATION_SYSTEM_OVERVIEW.md)** - System architecture
-- **[NOTIFICATION_STANDALONE_MODULE.md](./NOTIFICATION_STANDALONE_MODULE.md)** - Module design
-- **[NOTIFICATION_USING_EXISTING_TABLES.md](./NOTIFICATION_USING_EXISTING_TABLES.md)** - Why we use existing tables
+---
 
-### Reference
-- **[NOTIFICATION_TYPES_REFERENCE.md](./NOTIFICATION_TYPES_REFERENCE.md)** - All notification types
-- **[NOTIFICATION_TEMPLATE_EXAMPLES.md](./NOTIFICATION_TEMPLATE_EXAMPLES.md)** - Template examples
-- **[NOTIFICATION_ADMIN_GUIDE.md](./NOTIFICATION_ADMIN_GUIDE.md)** - Admin guide
-- **[LESSON_REMINDERS_SECURITY.md](./LESSON_REMINDERS_SECURITY.md)** - Security model
+## Documentation
 
-### Technical
-- **[NOTIFICATION_DATABASE_SCHEMA.md](./NOTIFICATION_DATABASE_SCHEMA.md)** - Database schema
-- **[LEARNING_PROGRESS_NOTIFICATIONS.md](./LEARNING_PROGRESS_NOTIFICATIONS.md)** - Learning progress details
+| File | What it covers |
+|---|---|
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | How the system works end-to-end, key design decisions |
+| **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** | What's wired today, what's not, what needs doing next |
+| **[NOTIFICATION_TYPES_REFERENCE.md](./NOTIFICATION_TYPES_REFERENCE.md)** | All planned event types and their trigger mechanisms |
+| **[NOTIFICATION_ADMIN_GUIDE.md](./NOTIFICATION_ADMIN_GUIDE.md)** | Guide for client admins managing templates and rules |
+| **[NOTIFICATION_DATABASE_SCHEMA.md](./NOTIFICATION_DATABASE_SCHEMA.md)** | Database tables, columns, and RLS policies |
+| **[NOTIFICATION_TEMPLATE_EXAMPLES.md](./NOTIFICATION_TEMPLATE_EXAMPLES.md)** | Ready-to-use HTML template examples |
+| **[LESSON_REMINDERS_SECURITY.md](./LESSON_REMINDERS_SECURITY.md)** | RLS policies and access control model |
 
-## 📦 Archived Documentation
+---
 
-Outdated documentation has been moved to `ARCHIVE/` folder. See [DOCUMENTATION_REVIEW.md](./DOCUMENTATION_REVIEW.md) for details.
+## Current Status (March 2026)
 
-Files archived include:
-- Historical lesson reminder setup docs (references non-existent tables)
-- Old implementation guides from a month ago
-- Outdated summaries and manifests
+### Fully working (5 event types)
+- `lesson_completed` — fired from `LessonViewer.tsx`
+- `track_milestone_50` — fired from `LearningTrackViewer.tsx`
+- `track_completed` — fired from `LearningTrackViewer.tsx`
+- `quiz_high_score` — fired from `useQuizLogic.ts`
+- `manager_employee_incomplete` — fired from Edge Function + cron
 
-## 🔍 Current Status
+### Templates exist but not wired (5 types)
+`lesson_reminder`, `course_completion`, `system_alert`, `task_due`, `achievement` — templates exist in `email_templates` and notification rules exist in `notification_rules`, but no call site fires these event types yet.
 
-### ✅ Working
-- Direct notification calls (lesson completed, track milestone, quiz high score)
-- Lesson reminder system (automated)
-- Email templates system with UI
-
-### ⚠️ Needs Implementation
-- Email preference checks in direct calls
-- Manager notifications (template ready, needs wiring)
-- Certificate expiration reminders
-
-See [IMPLEMENTATION_STRATEGY.md](./IMPLEMENTATION_STRATEGY.md) for full details.
-
+See [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) for the full breakdown and next steps.

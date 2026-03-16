@@ -808,7 +808,7 @@ export default function EmailTemplateManager({
                     id="content"
                     value={selectedTemplate.html_body_template}
                     disabled={!isEditing}
-                    rows={10}
+                    rows={25}
                     className="font-mono text-sm"
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSelectedTemplate({
                       ...selectedTemplate,

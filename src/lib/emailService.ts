@@ -142,7 +142,7 @@ export class EmailService {
         .select('*')
         .eq('type', type)
         .eq('is_active', true)
-        .order('system', { ascending: false }) // Prefer system templates
+        .order('is_system', { ascending: false }) // Prefer system templates
         .limit(1)
         .single();
 
