@@ -584,51 +584,59 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     var _a;
     try {
       const { data: user } = await supabaseClient.from("profiles").select("full_name, username").eq("id", event.user_id).single();
-      const { data: lesson } = await supabaseClient.from("lessons").select("title, description").eq("id", event.lesson_id).single();
-      let track = null;
-      let progress = null;
-      let lessonsCompleted = 0;
-      let totalLessons = 0;
-      let nextLesson = null;
-      if (event.learning_track_id) {
-        track = await supabaseClient.from("learning_tracks").select("title").eq("id", event.learning_track_id).single();
-        progress = await supabaseClient.from("user_learning_track_progress").select("current_lesson_order").eq("user_id", event.user_id).eq("learning_track_id", event.learning_track_id).maybeSingle();
-        const { data: completedLessons } = await supabaseClient.from("user_lesson_progress").select("lesson_id").eq("user_id", event.user_id).not("completed_at", "is", null);
-        const { data: trackLessons } = await supabaseClient.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", event.learning_track_id);
-        totalLessons = (trackLessons == null ? void 0 : trackLessons.length) || 0;
-        const completedInTrack = (completedLessons == null ? void 0 : completedLessons.filter(
-          (cl) => trackLessons == null ? void 0 : trackLessons.some((tl) => tl.lesson_id === cl.lesson_id)
-        ).length) || 0;
-        lessonsCompleted = completedInTrack;
-        const currentOrder = (progress == null ? void 0 : progress.current_lesson_order) || 0;
-        const { data: nextLessonData } = await supabaseClient.from("learning_track_lessons").select("lesson_id, order_index, lessons(title)").eq("learning_track_id", event.learning_track_id).gt("order_index", currentOrder).order("order_index").limit(1).maybeSingle();
-        if (nextLessonData) {
-          nextLesson = {
-            title: ((_a = nextLessonData.lessons) == null ? void 0 : _a.title) || "Next Lesson",
-            id: nextLessonData.lesson_id
-          };
-        }
-      }
+      const { data: lesson } = await supabaseClient.from("lessons").select("title, description, duration_minutes").eq("id", event.lesson_id).single();
       const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
       const clientId = event.clientId || "default";
       const clientPath = clientId !== "default" ? `/${clientId}` : "";
       const clientLoginUrl = `${origin}${clientPath}/login`;
+      const lessonUrl = `${origin}${clientPath}/lesson/${event.lesson_id}`;
+      let trackTitle = "";
+      let trackDescription = "";
+      let lessonsCompleted = 0;
+      let totalLessons = 0;
+      let nextLesson = null;
+      if (event.learning_track_id) {
+        const { data: track } = await supabaseClient.from("learning_tracks").select("title, description").eq("id", event.learning_track_id).single();
+        trackTitle = (track == null ? void 0 : track.title) || "";
+        trackDescription = (track == null ? void 0 : track.description) || "";
+        const { data: completedLessons } = await supabaseClient.from("user_lesson_progress").select("lesson_id").eq("user_id", event.user_id).not("completed_at", "is", null);
+        const { data: trackLessons } = await supabaseClient.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", event.learning_track_id);
+        totalLessons = (trackLessons == null ? void 0 : trackLessons.length) || 0;
+        lessonsCompleted = (completedLessons == null ? void 0 : completedLessons.filter(
+          (cl) => trackLessons == null ? void 0 : trackLessons.some((tl) => tl.lesson_id === cl.lesson_id)
+        ).length) || 0;
+        const { data: currentTrackLesson } = await supabaseClient.from("learning_track_lessons").select("order_index").eq("learning_track_id", event.learning_track_id).eq("lesson_id", event.lesson_id).maybeSingle();
+        if (currentTrackLesson) {
+          const { data: nextLessonData } = await supabaseClient.from("learning_track_lessons").select("lesson_id, order_index, lessons(title)").eq("learning_track_id", event.learning_track_id).gt("order_index", currentTrackLesson.order_index).order("order_index").limit(1).maybeSingle();
+          if (nextLessonData) {
+            nextLesson = {
+              title: ((_a = nextLessonData.lessons) == null ? void 0 : _a.title) || "Next Lesson",
+              id: nextLessonData.lesson_id
+            };
+          }
+        }
+      }
       const trackProgressPercentage = totalLessons > 0 ? Math.round(lessonsCompleted / totalLessons * 100) : 0;
+      const nextAvailableDate = event.next_lesson_available_date ? new Date(event.next_lesson_available_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
       return {
         user_name: (user == null ? void 0 : user.full_name) || "User",
         user_email: (user == null ? void 0 : user.username) || "",
         lesson_title: (lesson == null ? void 0 : lesson.title) || "Lesson",
         lesson_description: (lesson == null ? void 0 : lesson.description) || "",
-        learning_track_title: (track == null ? void 0 : track.title) || "",
-        completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US"),
+        lesson_duration: (lesson == null ? void 0 : lesson.duration_minutes) ? `${lesson.duration_minutes} min` : "",
+        lesson_url: lessonUrl,
+        learning_track_title: trackTitle,
+        learning_track_description: trackDescription,
+        completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
         completion_time: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        completion_percentage: trackProgressPercentage,
         lessons_completed_in_track: lessonsCompleted,
         total_lessons_in_track: totalLessons,
         track_progress_percentage: trackProgressPercentage,
         next_lesson_title: (nextLesson == null ? void 0 : nextLesson.title) || null,
         next_lesson_available: !!nextLesson,
-        next_lesson_url: clientLoginUrl,
-        // Always use login URL as per requirement
+        next_lesson_available_date: nextAvailableDate,
+        next_lesson_url: nextLesson ? `${origin}${clientPath}/lesson/${nextLesson.id}` : clientLoginUrl,
         client_login_url: clientLoginUrl
       };
     } catch (error) {
@@ -2165,7 +2173,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         user_id: context.user_id,
         lesson_id: context.lesson_id,
         learning_track_id: context.learning_track_id,
-        clientId
+        clientId,
+        next_lesson_available_date: context.next_lesson_available_date
       });
       variables2 = { ...variables2, client_login_url: clientLoginUrl };
       if (templateText) {
@@ -2175,7 +2184,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     if ((eventType === "track_milestone_50" || eventType === "track_completed") && context.learning_track_id) {
       const { data: trackProgress } = await supabase2.from("user_learning_track_progress").select("progress_percentage, enrolled_at, started_at").eq("user_id", context.user_id).eq("learning_track_id", context.learning_track_id).single();
-      const { data: track } = await supabase2.from("learning_tracks").select("title").eq("id", context.learning_track_id).single();
+      const { data: track } = await supabase2.from("learning_tracks").select("title, description").eq("id", context.learning_track_id).single();
       const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
       const { data: completedLessons } = await supabase2.from("user_lesson_progress").select("lesson_id").eq("user_id", context.user_id).not("completed_at", "is", null);
       const { data: trackLessons } = await supabase2.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", context.learning_track_id);
@@ -2192,13 +2201,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         );
         timeSpentHours = Math.round(totalMs / (1e3 * 60 * 60) * 10) / 10;
       }
+      const completionDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      const completionTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      const progressPct = (trackProgress == null ? void 0 : trackProgress.progress_percentage) || 0;
       let variables2 = {
         user_name: (profile == null ? void 0 : profile.full_name) || "User",
         learning_track_title: (track == null ? void 0 : track.title) || "Learning Track",
-        track_progress_percentage: (trackProgress == null ? void 0 : trackProgress.progress_percentage) || 0,
+        learning_track_description: (track == null ? void 0 : track.description) || "",
+        track_progress_percentage: progressPct,
+        completion_percentage: progressPct,
         lessons_completed_in_track: lessonsCompletedInTrack,
         total_lessons_in_track: totalLessons,
         time_spent_hours: timeSpentHours,
+        completion_date: completionDate,
+        completion_time: completionTime,
         client_login_url: clientLoginUrl
       };
       if (templateText) {
@@ -2232,10 +2248,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         else if (minutes > 0) completionTime = `${minutes} minute${minutes !== 1 ? "s" : ""}`;
         else completionTime = `${seconds} second${seconds !== 1 ? "s" : ""}`;
       }
+      const quizScore = context.score || 0;
+      const quizCompletionDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
       let variables2 = {
         user_name: (profile == null ? void 0 : profile.full_name) || "User",
         quiz_title: lesson.title || "Quiz",
-        score: context.score || 0,
+        lesson_title: lesson.title || "Quiz",
+        score: quizScore,
+        completion_score: quizScore,
+        completion_percentage: quizScore,
+        completion_date: quizCompletionDate,
         correct_answers: correctAnswers,
         total_questions: totalQuestions,
         completion_time: completionTime,

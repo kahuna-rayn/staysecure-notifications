@@ -506,6 +506,7 @@ export async function gatherLessonCompletedVariables(
     lesson_id: string; 
     learning_track_id?: string;
     clientId?: string;
+    next_lesson_available_date?: string | null;
   }
 ): Promise<Record<string, any>> {
   try {
@@ -516,34 +517,35 @@ export async function gatherLessonCompletedVariables(
       .eq('id', event.user_id)
       .single();
 
-    // Get lesson info
+    // Get lesson info including duration
     const { data: lesson } = await supabaseClient
       .from('lessons')
-      .select('title, description')
+      .select('title, description, duration_minutes')
       .eq('id', event.lesson_id)
       .single();
 
+    // Build client login URL
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://staysecure-learn.raynsecure.com';
+    const clientId = event.clientId || 'default';
+    const clientPath = clientId !== 'default' ? `/${clientId}` : '';
+    const clientLoginUrl = `${origin}${clientPath}/login`;
+    const lessonUrl = `${origin}${clientPath}/lesson/${event.lesson_id}`;
+
     // Get learning track info if available
-    let track = null;
-    let progress = null;
+    let trackTitle = '';
+    let trackDescription = '';
     let lessonsCompleted = 0;
     let totalLessons = 0;
     let nextLesson = null;
-    
+
     if (event.learning_track_id) {
-      track = await supabaseClient
+      const { data: track } = await supabaseClient
         .from('learning_tracks')
-        .select('title')
+        .select('title, description')
         .eq('id', event.learning_track_id)
         .single();
-
-      // Get progress in track
-      progress = await supabaseClient
-        .from('user_learning_track_progress')
-        .select('current_lesson_order')
-        .eq('user_id', event.user_id)
-        .eq('learning_track_id', event.learning_track_id)
-        .maybeSingle();
+      trackTitle = track?.title || '';
+      trackDescription = track?.description || '';
 
       // Count lessons completed in this track
       const { data: completedLessons } = await supabaseClient
@@ -559,62 +561,71 @@ export async function gatherLessonCompletedVariables(
         .eq('learning_track_id', event.learning_track_id);
 
       totalLessons = trackLessons?.length || 0;
-      
-      // Count how many completed lessons are in this track
-      const completedInTrack = completedLessons?.filter((cl: any) => 
+      lessonsCompleted = completedLessons?.filter((cl: any) =>
         trackLessons?.some((tl: any) => tl.lesson_id === cl.lesson_id)
       ).length || 0;
-      lessonsCompleted = completedInTrack;
 
-      // Get next lesson if available
-      const currentOrder = progress?.current_lesson_order || 0;
-      const { data: nextLessonData } = await supabaseClient
+      // Get next lesson by finding the order_index of the just-completed lesson,
+      // then selecting the immediately following lesson in the track.
+      // Using the current lesson's order_index (not user_learning_track_progress)
+      // avoids a race condition where the progress row hasn't been updated yet.
+      const { data: currentTrackLesson } = await supabaseClient
         .from('learning_track_lessons')
-        .select('lesson_id, order_index, lessons(title)')
+        .select('order_index')
         .eq('learning_track_id', event.learning_track_id)
-        .gt('order_index', currentOrder)
-        .order('order_index')
-        .limit(1)
+        .eq('lesson_id', event.lesson_id)
         .maybeSingle();
 
-      if (nextLessonData) {
-        nextLesson = {
-          title: (nextLessonData.lessons as any)?.title || 'Next Lesson',
-          id: nextLessonData.lesson_id
-        };
+      if (currentTrackLesson) {
+        const { data: nextLessonData } = await supabaseClient
+          .from('learning_track_lessons')
+          .select('lesson_id, order_index, lessons(title)')
+          .eq('learning_track_id', event.learning_track_id)
+          .gt('order_index', currentTrackLesson.order_index)
+          .order('order_index')
+          .limit(1)
+          .maybeSingle();
+
+        if (nextLessonData) {
+          nextLesson = {
+            title: (nextLessonData.lessons as any)?.title || 'Next Lesson',
+            id: nextLessonData.lesson_id,
+          };
+        }
       }
     }
 
-    // Build client login URL
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://staysecure-learn.raynsecure.com';
-    const clientId = event.clientId || 'default';
-    const clientPath = clientId !== 'default' ? `/${clientId}` : '';
-    const clientLoginUrl = `${origin}${clientPath}/login`;
-
-    // Calculate progress percentage
-    const trackProgressPercentage = totalLessons > 0 
+    const trackProgressPercentage = totalLessons > 0
       ? Math.round((lessonsCompleted / totalLessons) * 100)
       : 0;
+
+    const nextAvailableDate = event.next_lesson_available_date
+      ? new Date(event.next_lesson_available_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : null;
 
     return {
       user_name: user?.full_name || 'User',
       user_email: user?.username || '',
       lesson_title: lesson?.title || 'Lesson',
       lesson_description: lesson?.description || '',
-      learning_track_title: track?.title || '',
-      completion_date: new Date().toLocaleDateString('en-US'),
+      lesson_duration: lesson?.duration_minutes ? `${lesson.duration_minutes} min` : '',
+      lesson_url: lessonUrl,
+      learning_track_title: trackTitle,
+      learning_track_description: trackDescription,
+      completion_date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
       completion_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      completion_percentage: trackProgressPercentage,
       lessons_completed_in_track: lessonsCompleted,
       total_lessons_in_track: totalLessons,
       track_progress_percentage: trackProgressPercentage,
       next_lesson_title: nextLesson?.title || null,
       next_lesson_available: !!nextLesson,
-      next_lesson_url: clientLoginUrl, // Always use login URL as per requirement
-      client_login_url: clientLoginUrl
+      next_lesson_available_date: nextAvailableDate,
+      next_lesson_url: nextLesson ? `${origin}${clientPath}/lesson/${nextLesson.id}` : clientLoginUrl,
+      client_login_url: clientLoginUrl,
     };
   } catch (error) {
     console.error('Error gathering lesson completed variables:', error);
-    // Return minimal fallback
     return {
       user_name: 'User',
       lesson_title: 'Lesson',

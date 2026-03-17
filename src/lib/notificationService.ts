@@ -30,6 +30,8 @@ export interface NotificationContext {
   manager_id?: string;
   document_title?: string;
   due_days?: number;
+  /** Pre-computed next lesson available date (ISO string) from LearningTrackViewer scheduling logic */
+  next_lesson_available_date?: string | null;
   /** Client ID (e.g. "nexus"). Pass explicitly — do NOT rely on window.location here. */
   clientId?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -250,6 +252,7 @@ export async function gatherTemplateVariables(
       lesson_id: context.lesson_id,
       learning_track_id: context.learning_track_id,
       clientId,
+      next_lesson_available_date: context.next_lesson_available_date,
     });
     variables = { ...variables, client_login_url: clientLoginUrl };
     if (templateText) {
@@ -268,7 +271,7 @@ export async function gatherTemplateVariables(
       .single();
 
     const { data: track } = await supabase
-      .from('learning_tracks').select('title').eq('id', context.learning_track_id).single();
+      .from('learning_tracks').select('title, description').eq('id', context.learning_track_id).single();
 
     const { data: profile } = await supabase
       .from('profiles').select('full_name').eq('id', context.user_id).single();
@@ -305,13 +308,21 @@ export async function gatherTemplateVariables(
       timeSpentHours = Math.round((totalMs / (1000 * 60 * 60)) * 10) / 10;
     }
 
+    const completionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const completionTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const progressPct = trackProgress?.progress_percentage || 0;
+
     let variables: Record<string, unknown> = {
       user_name: profile?.full_name || 'User',
       learning_track_title: track?.title || 'Learning Track',
-      track_progress_percentage: trackProgress?.progress_percentage || 0,
+      learning_track_description: track?.description || '',
+      track_progress_percentage: progressPct,
+      completion_percentage: progressPct,
       lessons_completed_in_track: lessonsCompletedInTrack,
       total_lessons_in_track: totalLessons,
       time_spent_hours: timeSpentHours,
+      completion_date: completionDate,
+      completion_time: completionTime,
       client_login_url: clientLoginUrl,
     };
     if (templateText) {
@@ -363,10 +374,17 @@ export async function gatherTemplateVariables(
       else completionTime = `${seconds} second${seconds !== 1 ? 's' : ''}`;
     }
 
+    const quizScore = context.score || 0;
+    const quizCompletionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
     let variables: Record<string, unknown> = {
       user_name: profile?.full_name || 'User',
       quiz_title: lesson.title || 'Quiz',
-      score: context.score || 0,
+      lesson_title: lesson.title || 'Quiz',
+      score: quizScore,
+      completion_score: quizScore,
+      completion_percentage: quizScore,
+      completion_date: quizCompletionDate,
       correct_answers: correctAnswers,
       total_questions: totalQuestions,
       completion_time: completionTime,

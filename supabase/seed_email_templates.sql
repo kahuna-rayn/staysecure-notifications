@@ -324,3 +324,55 @@ FROM email_templates
 WHERE type = 'document_completed_manager' AND is_active = true
 LIMIT 1
 ON CONFLICT DO NOTHING;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- notification_rules for all standard event types
+-- Safe to re-run: ON CONFLICT DO NOTHING
+-- ─────────────────────────────────────────────────────────────────────────────
+INSERT INTO notification_rules (name, description, email_template_id, trigger_event, trigger_conditions, is_enabled, send_immediately, respect_quiet_hours)
+SELECT
+  'Lesson Completed Notification',
+  'Notifies a user when they complete a lesson',
+  id, 'lesson_completed', '{}'::jsonb, true, true, false
+FROM email_templates WHERE type = 'lesson_completed' AND is_active = true LIMIT 1
+ON CONFLICT DO NOTHING;
+
+INSERT INTO notification_rules (name, description, email_template_id, trigger_event, trigger_conditions, is_enabled, send_immediately, respect_quiet_hours)
+SELECT
+  'Track Completed Notification',
+  'Notifies a user when they complete a learning track',
+  id, 'track_completed', '{}'::jsonb, true, true, false
+FROM email_templates WHERE type = 'track_completed' AND is_active = true LIMIT 1
+ON CONFLICT DO NOTHING;
+
+INSERT INTO notification_rules (name, description, email_template_id, trigger_event, trigger_conditions, is_enabled, send_immediately, respect_quiet_hours)
+SELECT
+  'Document Assigned Notification',
+  'Notifies a user when a document is assigned to them',
+  id, 'document_assigned', '{}'::jsonb, true, true, false
+FROM email_templates WHERE type = 'document_assigned' AND is_active = true LIMIT 1
+ON CONFLICT DO NOTHING;
+
+INSERT INTO notification_rules (name, description, email_template_id, trigger_event, trigger_conditions, is_enabled, send_immediately, respect_quiet_hours)
+SELECT
+  'Track Milestone 50% Notification',
+  'Sends email when a user reaches 50% completion of a learning track',
+  id, 'track_milestone_50', '{}'::jsonb, true, true, false
+FROM email_templates WHERE type = 'track_milestone_50' AND is_active = true LIMIT 1
+ON CONFLICT DO NOTHING;
+
+INSERT INTO notification_rules (name, description, email_template_id, trigger_event, trigger_conditions, is_enabled, send_immediately, respect_quiet_hours)
+SELECT
+  'Quiz High Score Notification',
+  'Sends email when a user scores 90% or higher on a quiz',
+  id, 'quiz_high_score', '{"score": ">=90"}'::jsonb, true, true, false
+FROM email_templates WHERE type = 'quiz_high_score' AND is_active = true LIMIT 1
+ON CONFLICT DO NOTHING;
+
+INSERT INTO notification_rules (name, description, email_template_id, trigger_event, trigger_conditions, is_enabled, send_immediately, respect_quiet_hours)
+SELECT
+  'Manager Employee Incomplete Lessons Notification',
+  'Sends email to manager when employee has not completed required lessons after max reminder attempts',
+  id, 'manager_employee_incomplete', '{}'::jsonb, true, true, true
+FROM email_templates WHERE type = 'manager_employee_incomplete' AND is_active = true LIMIT 1
+ON CONFLICT DO NOTHING;
