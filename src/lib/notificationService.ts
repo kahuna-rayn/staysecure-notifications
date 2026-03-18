@@ -97,7 +97,36 @@ export async function sendNotificationByEvent(
       return;
     }
 
-    for (const rule of rules) {
+    // Deduplication: for lesson_completed and track_completed, only send one email per event.
+    // Handles both duplicate notification_rules and duplicate frontend calls.
+    const dedupeWindowMinutes = 5;
+    if (['lesson_completed', 'track_completed'].includes(eventType)) {
+      const dedupeKey = eventType === 'lesson_completed'
+        ? (context as { lesson_id?: string }).lesson_id
+        : (context as { learning_track_id?: string }).learning_track_id;
+      if (dedupeKey) {
+        const cutoff = new Date(Date.now() - dedupeWindowMinutes * 60 * 1000).toISOString();
+        const { data: recent } = await supabase
+          .from('notification_history')
+          .select('id')
+          .eq('user_id', user_id)
+          .eq('trigger_event', eventType)
+          .eq('status', 'sent')
+          .gte('sent_at', cutoff)
+          .limit(1);
+        if (recent && recent.length > 0) {
+          console.debug(`[notifications] Skipping duplicate ${eventType} for user ${user_id} (recent send within ${dedupeWindowMinutes}m)`);
+          return;
+        }
+      }
+    }
+
+    // For lesson_completed and track_completed, only process first rule (duplicate rules cause 2 emails)
+    const rulesToProcess = (['lesson_completed', 'track_completed'].includes(eventType) && rules.length > 1)
+      ? rules.slice(0, 1)
+      : rules;
+
+    for (const rule of rulesToProcess) {
       try {
         if (rule.trigger_conditions && !checkTriggerConditions(rule.trigger_conditions, context)) {
           console.debug(`[notifications] Trigger conditions not met for rule ${rule.name}`);
