@@ -18,6 +18,7 @@ import { emailService, gatherLessonCompletedVariables } from './emailService';
 export interface NotificationContext {
   user_id: string;
   lesson_id?: string;
+  next_lesson_id?: string;
   learning_track_id?: string;
   task_id?: string;
   review_id?: string;
@@ -182,12 +183,15 @@ export async function sendNotificationByEvent(
         // Type-specific preference gate
         let typeEnabled = true;
         let skipReason = '';
-        if (['lesson_completed', 'track_milestone_50', 'track_completed'].includes(eventType)) {
+        if (['lesson_completed', 'track_milestone_50', 'track_completed', 'course_completion'].includes(eventType)) {
           typeEnabled = preferences.track_completions !== false;
           if (!typeEnabled) skipReason = `${preferenceSource}_track_completions_disabled`;
-        } else if (eventType === 'quiz_high_score' || eventType.startsWith('quiz_')) {
+        } else if (eventType === 'quiz_high_score' || eventType === 'achievement' || eventType.startsWith('quiz_')) {
           typeEnabled = preferences.achievements !== false;
           if (!typeEnabled) skipReason = `${preferenceSource}_achievements_disabled`;
+        } else if (eventType === 'lesson_reminder') {
+          typeEnabled = preferences.lesson_reminders !== false;
+          if (!typeEnabled) skipReason = `${preferenceSource}_lesson_reminders_disabled`;
         } else if (eventType === 'document_assigned') {
           const pref = (preferences as Record<string, unknown>).document_notifications;
           typeEnabled = pref !== false;
@@ -477,6 +481,38 @@ export async function gatherTemplateVariables(
     };
   }
 
+  // ── manager_staff_pending ─────────────────────────────────────────────────
+  // user_id = manager (the recipient); queries their pending staff directly
+  if (eventType === 'manager_staff_pending') {
+    const { data: managerProfile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    const { data: pendingStaff } = await supabase
+      .from('profiles')
+      .select('full_name, username, created_at')
+      .eq('manager', context.user_id)
+      .eq('status', 'Pending');
+
+    const pendingEmployees = (pendingStaff || []).map((p: { full_name?: string; username?: string; created_at?: string }) => ({
+      full_name: p.full_name || 'Team member',
+      email: p.username || '',
+      invited_at: p.created_at
+        ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '',
+    }));
+
+    let variables: Record<string, unknown> = {
+      manager_name: managerProfile?.full_name || 'Manager',
+      pending_count: pendingEmployees.length,
+      pending_employees: pendingEmployees,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
   // ── manager_employee_incomplete ───────────────────────────────────────────
   if (eventType === 'manager_employee_incomplete') {
     const managerId = context.manager_id || context.user_id;
@@ -499,6 +535,101 @@ export async function gatherTemplateVariables(
       reminder_attempts: 3, multiple_attempts: true,
       incomplete_lessons: incompleteLessons,
       total_incomplete_count: incompleteLessons.length,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── achievement ───────────────────────────────────────────────────────────
+  if (eventType === 'achievement') {
+    const { data: profile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    const achievementDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Prefer values passed directly in context (e.g. from awardTrophy); fall back to cert lookup
+    let achievementName = (context.achievement_name as string | undefined) || '';
+    let achievementDescription = (context.achievement_description as string | undefined) || '';
+
+    if (!achievementName && context.certificate_id) {
+      const { data: cert } = await supabase
+        .from('certificates')
+        .select('name, type')
+        .eq('id', context.certificate_id)
+        .maybeSingle();
+      achievementName = cert?.name || '';
+      achievementDescription = cert?.type || '';
+    }
+
+    let variables: Record<string, unknown> = {
+      user_name: profile?.full_name || 'User',
+      achievement_name: achievementName,
+      achievement_description: achievementDescription,
+      achievement_date: achievementDate,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── course_completion ─────────────────────────────────────────────────────
+  if (eventType === 'course_completion') {
+    const { data: profile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    let courseName = '';
+    if (context.lesson_id) {
+      const { data: lessonData } = await supabase
+        .from('lessons').select('title').eq('id', context.lesson_id).maybeSingle();
+      courseName = lessonData?.title || '';
+    }
+
+    const completionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    let variables: Record<string, unknown> = {
+      user_name: profile?.full_name || 'User',
+      course_name: courseName,
+      completion_date: completionDate,
+      score: context.score ?? 0,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── lesson_reminder ───────────────────────────────────────────────────────
+  if (eventType === 'lesson_reminder') {
+    const { data: profile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    let lessonTitle = '';
+    let trackTitle = '';
+
+    const targetLessonId = context.next_lesson_id || context.lesson_id;
+    if (targetLessonId) {
+      const { data: lessonData } = await supabase
+        .from('lessons').select('title').eq('id', targetLessonId).maybeSingle();
+      lessonTitle = lessonData?.title || '';
+    }
+
+    if (context.learning_track_id) {
+      const { data: trackData } = await supabase
+        .from('learning_tracks').select('title').eq('id', context.learning_track_id).maybeSingle();
+      trackTitle = trackData?.title || '';
+    }
+
+    let variables: Record<string, unknown> = {
+      user_name: profile?.full_name || 'User',
+      lesson_title: lessonTitle,
+      learning_track_title: trackTitle,
+      next_lesson_available_date: context.next_lesson_available_date || '',
       client_login_url: clientLoginUrl,
     };
     if (templateText) {
