@@ -535,7 +535,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         } else {
           const isFalse = (v) => v === false;
           if (normalizedType.startsWith("track_") || normalizedType.includes("course")) {
-            const flag = data.track_completions ?? data.course_completions;
+            const flag = data.track_completions ?? data.track_completions;
             if (isFalse(flag)) return { allow: false, reason: "track_completions_disabled" };
           }
           if (normalizedType.startsWith("quiz_") || normalizedType.includes("achievement")) {
