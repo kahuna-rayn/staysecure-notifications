@@ -2286,19 +2286,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return variables2;
     }
-    if (eventType === "document_assigned") {
-      const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
+    if (eventType === "document_assigned" || eventType === "documents") {
+      const [{ data: profile }, { data: document2 }] = await Promise.all([
+        supabase2.from("profiles").select("full_name").eq("id", context.user_id).single(),
+        context.document_id ? supabase2.from("documents").select("url").eq("document_id", context.document_id).single() : Promise.resolve({ data: null })
+      ]);
       const dueDays = context.due_days || 0;
       const dueDate = dueDays > 0 ? (() => {
         const d = /* @__PURE__ */ new Date();
         d.setDate(d.getDate() + dueDays);
         return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
       })() : "No due date";
+      const externalUrl = document2 == null ? void 0 : document2.url;
+      const documentUrl = externalUrl || (context.document_id ? `${clientLoginUrl}?doc=${context.document_id}` : clientLoginUrl);
       return {
         user_name: (profile == null ? void 0 : profile.full_name) || "User",
         document_title: context.document_title || "",
         due_date: dueDate,
         due_days: dueDays,
+        document_url: documentUrl,
         login_url: clientLoginUrl,
         client_login_url: clientLoginUrl
       };
@@ -2340,25 +2346,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (eventType === "manager_employee_incomplete") {
       const managerId = context.manager_id || context.user_id;
       const { data: managerProfile } = await supabase2.from("profiles").select("full_name").eq("id", managerId).single();
-      const { data: employeeProfile } = await supabase2.from("profiles").select("full_name, username").neq("id", managerId).limit(1).single();
-      const { data: sampleLessons } = await supabase2.from("lessons").select("id, title").limit(3);
-      const incompleteLessons = (sampleLessons || []).map((l) => ({
-        lesson_title: l.title,
-        learning_track_title: "Cybersecurity Fundamentals",
-        due_date: null
-      }));
-      const employeeName = (employeeProfile == null ? void 0 : employeeProfile.full_name) || "Employee Name";
-      const employeeEmail = (employeeProfile == null ? void 0 : employeeProfile.username) || "employee@example.com";
+      const { data: sampleEmployees } = await supabase2.from("profiles").select("full_name").neq("id", managerId).limit(2);
+      const incompleteEmployees = (sampleEmployees || []).map(
+        (p, i) => ({
+          full_name: p.full_name || `Team Member ${i + 1}`,
+          incomplete_count: i + 1
+        })
+      );
+      const firstEmployee = incompleteEmployees[0];
       let variables2 = {
         manager_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager Name",
-        employee_name: employeeName,
-        employee_email: employeeEmail,
-        user_name: employeeName,
-        user_email: employeeEmail,
+        employee_name: (firstEmployee == null ? void 0 : firstEmployee.full_name) || "Team Member",
+        user_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager Name",
         reminder_attempts: 3,
         multiple_attempts: true,
-        incomplete_lessons: incompleteLessons,
-        total_incomplete_count: incompleteLessons.length,
+        incomplete_employees: incompleteEmployees,
+        total_incomplete_count: incompleteEmployees.length,
         client_login_url: clientLoginUrl
       };
       if (templateText) {

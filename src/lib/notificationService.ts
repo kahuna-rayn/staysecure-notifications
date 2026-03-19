@@ -432,9 +432,15 @@ export async function gatherTemplateVariables(
   }
 
   // ── document_assigned ─────────────────────────────────────────────────────
-  if (eventType === 'document_assigned') {
-    const { data: profile } = await supabase
-      .from('profiles').select('full_name').eq('id', context.user_id).single();
+  // The template's DB type is 'documents'; the trigger event is 'document_assigned'.
+  // The preview calls this with template.type ('documents'), so we accept both.
+  if (eventType === 'document_assigned' || eventType === 'documents') {
+    const [{ data: profile }, { data: document }] = await Promise.all([
+      supabase.from('profiles').select('full_name').eq('id', context.user_id).single(),
+      context.document_id
+        ? supabase.from('documents').select('url').eq('document_id', context.document_id).single()
+        : Promise.resolve({ data: null }),
+    ]);
 
     const dueDays = context.due_days || 0;
     const dueDate = dueDays > 0
@@ -445,11 +451,19 @@ export async function gatherTemplateVariables(
         })()
       : 'No due date';
 
+    // External URL docs → use the URL directly.
+    // Stored-file docs (url is null) → send to the login page with ?doc= so the app can
+    // auto-open the document after the user authenticates (deep-link pattern).
+    const externalUrl = (document as { url?: string | null } | null)?.url;
+    const documentUrl = externalUrl
+      || (context.document_id ? `${clientLoginUrl}?doc=${context.document_id}` : clientLoginUrl);
+
     return {
       user_name: profile?.full_name || 'User',
       document_title: context.document_title || '',
       due_date: dueDate,
       due_days: dueDays,
+      document_url: documentUrl,
       login_url: clientLoginUrl,
       client_login_url: clientLoginUrl,
     };
@@ -518,23 +532,32 @@ export async function gatherTemplateVariables(
     const managerId = context.manager_id || context.user_id;
     const { data: managerProfile } = await supabase
       .from('profiles').select('full_name').eq('id', managerId).single();
-    const { data: employeeProfile } = await supabase
-      .from('profiles').select('full_name, username').neq('id', managerId).limit(1).single();
-    const { data: sampleLessons } = await supabase.from('lessons').select('id, title').limit(3);
 
-    const incompleteLessons = (sampleLessons || []).map((l: { id: string; title: string }) => ({
-      lesson_title: l.title, learning_track_title: 'Cybersecurity Fundamentals', due_date: null,
-    }));
-    const employeeName = employeeProfile?.full_name || 'Employee Name';
-    const employeeEmail = employeeProfile?.username || 'employee@example.com';
+    // Preview mock: build a sample incomplete_employees list matching the template shape.
+    // Real sends go through the process-scheduled-notifications Edge Function which
+    // queries real data and builds this array from actual employee records.
+    const { data: sampleEmployees } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .neq('id', managerId)
+      .limit(2);
+
+    const incompleteEmployees = (sampleEmployees || []).map(
+      (p: { full_name?: string }, i: number) => ({
+        full_name: p.full_name || `Team Member ${i + 1}`,
+        incomplete_count: i + 1,
+      })
+    );
+    const firstEmployee = incompleteEmployees[0];
 
     let variables: Record<string, unknown> = {
       manager_name: managerProfile?.full_name || 'Manager Name',
-      employee_name: employeeName, employee_email: employeeEmail,
-      user_name: employeeName, user_email: employeeEmail,
-      reminder_attempts: 3, multiple_attempts: true,
-      incomplete_lessons: incompleteLessons,
-      total_incomplete_count: incompleteLessons.length,
+      employee_name: firstEmployee?.full_name || 'Team Member',
+      user_name: managerProfile?.full_name || 'Manager Name',
+      reminder_attempts: 3,
+      multiple_attempts: true,
+      incomplete_employees: incompleteEmployees,
+      total_incomplete_count: incompleteEmployees.length,
       client_login_url: clientLoginUrl,
     };
     if (templateText) {
