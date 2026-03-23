@@ -273,6 +273,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
   ]);
   const DEFAULT_LEARN_APP_BASE_URL = "https://staysecure-learn.raynsecure.com";
+  function normalizeLearnAppBaseUrl(input) {
+    const trimmed = input.trim().replace(/\/$/, "");
+    try {
+      const u = new URL(trimmed);
+      return `${u.protocol}//${u.host}`;
+    } catch {
+      return trimmed;
+    }
+  }
+  function normalizeClientSegmentForUrl(clientId) {
+    const raw = (clientId || "default").trim() || "default";
+    const lower = raw.toLowerCase();
+    if (lower === "dev" || lower === "staging") {
+      return { kind: "env", segment: lower };
+    }
+    if (lower === "default") {
+      return { kind: "default", segment: "default" };
+    }
+    return { kind: "tenant", segment: lower };
+  }
   const RESERVED_LEARN_APP_PATH_PREFIXES = /* @__PURE__ */ new Set([
     "admin",
     "forgot-password",
@@ -298,25 +318,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return null;
   }
   function buildLearnPathPrefix(clientId) {
-    const cid = (clientId || "default").trim() || "default";
-    if (cid === "dev" || cid === "staging" || cid === "default") {
-      return "";
+    const norm = normalizeClientSegmentForUrl(clientId);
+    if (norm.kind === "tenant") {
+      return `/${norm.segment}`;
     }
-    return `/${cid}`;
+    return "";
   }
   function buildLearnLoginUrl(options) {
-    const base = (options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL).replace(/\/$/, "");
-    const cid = (options.clientId || "default").trim() || "default";
-    if (cid === "dev" || cid === "staging") {
-      return `${base}/login`;
+    const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+    const norm = normalizeClientSegmentForUrl(options.clientId);
+    if (norm.kind === "env") {
+      return `${base}/`;
     }
-    if (cid !== "default") {
-      return `${base}/${cid}/login`;
+    if (norm.kind === "tenant") {
+      return `${base}/${norm.segment}`;
     }
-    return `${base}/login`;
+    return `${base}/`;
   }
   function buildLearnLessonUrl(options) {
-    const base = (options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL).replace(/\/$/, "");
+    const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
     const prefix = buildLearnPathPrefix(options.clientId);
     return `${base}${prefix}/lesson/${options.lessonId}`;
   }
@@ -2652,6 +2672,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   exports2.gatherLessonCompletedVariables = gatherLessonCompletedVariables;
   exports2.gatherTemplateVariables = gatherTemplateVariables;
   exports2.getLearnClientSlugFromBrowser = getLearnClientSlugFromBrowser;
+  exports2.normalizeLearnAppBaseUrl = normalizeLearnAppBaseUrl;
   exports2.resolveLearnClientIdForEmailUrls = resolveLearnClientIdForEmailUrls;
   exports2.sendNotificationByEvent = sendNotificationByEvent;
   exports2.useNotifications = useNotifications;

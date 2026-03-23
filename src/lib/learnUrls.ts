@@ -1,11 +1,41 @@
 /**
  * Single place for Learn app URL rules used in emails and templates.
  *
- * Production: https://staysecure-learn.raynsecure.com/{tenant}/login
- * Dev / staging hosts: https://dev.staysecure-learn.raynsecure.com/login (no path segment for tenant slug)
+ * Production: https://staysecure-learn.raynsecure.com/{tenant} (Index — there is no /login route)
+ * Dev / staging: https://dev.staysecure-learn.raynsecure.com/ (no tenant path segment)
  */
 
 export const DEFAULT_LEARN_APP_BASE_URL = 'https://staysecure-learn.raynsecure.com';
+
+/**
+ * Origin only. APP_BASE_URL is sometimes set with a mistaken path (e.g. …/nexus);
+ * combining that with clientId would produce …/nexus/NEXUS.
+ */
+export function normalizeLearnAppBaseUrl(input: string): string {
+  const trimmed = input.trim().replace(/\/$/, '');
+  try {
+    const u = new URL(trimmed);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return trimmed;
+  }
+}
+
+/** dev / staging / default / tenant slug for URL path (tenant segments lowercased). */
+function normalizeClientSegmentForUrl(clientId: string | null | undefined): {
+  kind: 'env' | 'default' | 'tenant';
+  segment: string;
+} {
+  const raw = (clientId || 'default').trim() || 'default';
+  const lower = raw.toLowerCase();
+  if (lower === 'dev' || lower === 'staging') {
+    return { kind: 'env', segment: lower };
+  }
+  if (lower === 'default') {
+    return { kind: 'default', segment: 'default' };
+  }
+  return { kind: 'tenant', segment: lower };
+}
 
 /** First path segment is an app route, not a tenant short name */
 export const RESERVED_LEARN_APP_PATH_PREFIXES = new Set([
@@ -45,29 +75,30 @@ export interface BuildLearnLoginUrlOptions {
  * Tenant segment for path-based routing: '' for default/dev/staging, else /{slug}
  */
 export function buildLearnPathPrefix(clientId: string | null | undefined): string {
-  const cid = (clientId || 'default').trim() || 'default';
-  if (cid === 'dev' || cid === 'staging' || cid === 'default') {
-    return '';
+  const norm = normalizeClientSegmentForUrl(clientId);
+  if (norm.kind === 'tenant') {
+    return `/${norm.segment}`;
   }
-  return `/${cid}`;
+  return '';
 }
 
 export function buildLearnLoginUrl(options: BuildLearnLoginUrlOptions): string {
-  const base = (options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL).replace(/\/$/, '');
-  const cid = (options.clientId || 'default').trim() || 'default';
-  if (cid === 'dev' || cid === 'staging') {
-    return `${base}/login`;
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+  const norm = normalizeClientSegmentForUrl(options.clientId);
+  // Learn App.tsx: login is Index at `/` and `/:client` — no `/login` route.
+  if (norm.kind === 'env') {
+    return `${base}/`;
   }
-  if (cid !== 'default') {
-    return `${base}/${cid}/login`;
+  if (norm.kind === 'tenant') {
+    return `${base}/${norm.segment}`;
   }
-  return `${base}/login`;
+  return `${base}/`;
 }
 
 export function buildLearnLessonUrl(
   options: BuildLearnLoginUrlOptions & { lessonId: string }
 ): string {
-  const base = (options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL).replace(/\/$/, '');
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
   const prefix = buildLearnPathPrefix(options.clientId);
   return `${base}${prefix}/lesson/${options.lessonId}`;
 }
