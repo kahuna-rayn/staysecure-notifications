@@ -1,5 +1,12 @@
 // Email service using Lambda + SES for better security
 
+import {
+  buildLearnLessonUrl,
+  buildLearnLoginUrl,
+  DEFAULT_LEARN_APP_BASE_URL,
+  resolveLearnClientIdForEmailUrls,
+} from './learnUrls';
+
 export interface EmailData {
   to: string;
   subject: string;
@@ -59,6 +66,11 @@ export class EmailService {
     if (config.baseUrl) {
       instance.baseUrl = config.baseUrl;
     }
+  }
+
+  /** Base URL for emails when `window` is unavailable (e.g. template preview). */
+  public getBaseUrl(): string {
+    return this.baseUrl;
   }
 
   // Helper method to generate lesson URLs
@@ -524,12 +536,21 @@ export async function gatherLessonCompletedVariables(
       .eq('id', event.lesson_id)
       .single();
 
-    // Build client login URL
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://staysecure-learn.raynsecure.com';
-    const clientId = event.clientId || 'default';
-    const clientPath = clientId !== 'default' ? `/${clientId}` : '';
-    const clientLoginUrl = `${origin}${clientPath}/login`;
-    const lessonUrl = `${origin}${clientPath}/lesson/${event.lesson_id}`;
+    const appBase =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : (() => {
+            const b = EmailService.getInstance().getBaseUrl();
+            return b ? b.replace(/\/$/, '') : DEFAULT_LEARN_APP_BASE_URL;
+          })();
+
+    const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabaseClient, event.clientId);
+    const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
+    const lessonUrl = buildLearnLessonUrl({
+      appBaseUrl: appBase,
+      clientId: resolvedClientId,
+      lessonId: event.lesson_id,
+    });
 
     // Get learning track info if available
     let trackTitle = '';
@@ -621,7 +642,13 @@ export async function gatherLessonCompletedVariables(
       next_lesson_title: nextLesson?.title || null,
       next_lesson_available: !!nextLesson,
       next_lesson_available_date: nextAvailableDate,
-      next_lesson_url: nextLesson ? `${origin}${clientPath}/lesson/${nextLesson.id}` : clientLoginUrl,
+      next_lesson_url: nextLesson
+        ? buildLearnLessonUrl({
+            appBaseUrl: appBase,
+            clientId: resolvedClientId,
+            lessonId: nextLesson.id,
+          })
+        : clientLoginUrl,
       client_login_url: clientLoginUrl,
     };
   } catch (error) {
@@ -629,7 +656,10 @@ export async function gatherLessonCompletedVariables(
     return {
       user_name: 'User',
       lesson_title: 'Lesson',
-      client_login_url: 'https://staysecure-learn.raynsecure.com/login'
+      client_login_url: buildLearnLoginUrl({
+        appBaseUrl: DEFAULT_LEARN_APP_BASE_URL,
+        clientId: 'default',
+      })
     };
   }
 }

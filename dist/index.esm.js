@@ -272,6 +272,72 @@ const User = createLucideIcon("User", [
   ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
   ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
 ]);
+const DEFAULT_LEARN_APP_BASE_URL = "https://staysecure-learn.raynsecure.com";
+const RESERVED_LEARN_APP_PATH_PREFIXES = /* @__PURE__ */ new Set([
+  "admin",
+  "forgot-password",
+  "reset-password",
+  "activate-account",
+  "email-notifications"
+]);
+function getLearnClientSlugFromBrowser() {
+  if (typeof window === "undefined") return null;
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  if (pathParts.length === 0) return null;
+  const first = pathParts[0];
+  if (!RESERVED_LEARN_APP_PATH_PREFIXES.has(first)) {
+    return first;
+  }
+  const last = sessionStorage.getItem("lastBasePath");
+  if (last && last !== "/") {
+    const slug = last.replace(/^\//, "").split("/")[0];
+    if (slug && !RESERVED_LEARN_APP_PATH_PREFIXES.has(slug)) {
+      return slug;
+    }
+  }
+  return null;
+}
+function buildLearnPathPrefix(clientId) {
+  const cid = (clientId || "default").trim() || "default";
+  if (cid === "dev" || cid === "staging" || cid === "default") {
+    return "";
+  }
+  return `/${cid}`;
+}
+function buildLearnLoginUrl(options) {
+  const base = (options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL).replace(/\/$/, "");
+  const cid = (options.clientId || "default").trim() || "default";
+  if (cid === "dev" || cid === "staging") {
+    return `${base}/login`;
+  }
+  if (cid !== "default") {
+    return `${base}/${cid}/login`;
+  }
+  return `${base}/login`;
+}
+function buildLearnLessonUrl(options) {
+  const base = (options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL).replace(/\/$/, "");
+  const prefix = buildLearnPathPrefix(options.clientId);
+  return `${base}${prefix}/lesson/${options.lessonId}`;
+}
+async function resolveLearnClientIdForEmailUrls(supabase2, explicitClientId) {
+  if (explicitClientId && explicitClientId !== "default") {
+    return explicitClientId;
+  }
+  const fromBrowser = getLearnClientSlugFromBrowser();
+  if (fromBrowser) {
+    return fromBrowser;
+  }
+  try {
+    const { data } = await supabase2.from("org_profile").select("org_short_name").limit(1).maybeSingle();
+    const name = data == null ? void 0 : data.org_short_name;
+    if (name) {
+      return name;
+    }
+  } catch {
+  }
+  return "default";
+}
 const _EmailService = class _EmailService {
   constructor() {
     __publicField(this, "defaultFrom");
@@ -293,6 +359,10 @@ const _EmailService = class _EmailService {
     if (config.baseUrl) {
       instance.baseUrl = config.baseUrl;
     }
+  }
+  /** Base URL for emails when `window` is unavailable (e.g. template preview). */
+  getBaseUrl() {
+    return this.baseUrl;
   }
   // Helper method to generate lesson URLs
   generateLessonUrl(lessonId, clientPath) {
@@ -585,11 +655,17 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
   try {
     const { data: user } = await supabaseClient.from("profiles").select("full_name, username").eq("id", event.user_id).single();
     const { data: lesson } = await supabaseClient.from("lessons").select("title, description, duration_minutes").eq("id", event.lesson_id).single();
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
-    const clientId = event.clientId || "default";
-    const clientPath = clientId !== "default" ? `/${clientId}` : "";
-    const clientLoginUrl = `${origin}${clientPath}/login`;
-    const lessonUrl = `${origin}${clientPath}/lesson/${event.lesson_id}`;
+    const appBase = typeof window !== "undefined" ? window.location.origin : (() => {
+      const b = EmailService.getInstance().getBaseUrl();
+      return b ? b.replace(/\/$/, "") : DEFAULT_LEARN_APP_BASE_URL;
+    })();
+    const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabaseClient, event.clientId);
+    const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
+    const lessonUrl = buildLearnLessonUrl({
+      appBaseUrl: appBase,
+      clientId: resolvedClientId,
+      lessonId: event.lesson_id
+    });
     let trackTitle = "";
     let trackDescription = "";
     let lessonsCompleted = 0;
@@ -636,7 +712,11 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
       next_lesson_title: (nextLesson == null ? void 0 : nextLesson.title) || null,
       next_lesson_available: !!nextLesson,
       next_lesson_available_date: nextAvailableDate,
-      next_lesson_url: nextLesson ? `${origin}${clientPath}/lesson/${nextLesson.id}` : clientLoginUrl,
+      next_lesson_url: nextLesson ? buildLearnLessonUrl({
+        appBaseUrl: appBase,
+        clientId: resolvedClientId,
+        lessonId: nextLesson.id
+      }) : clientLoginUrl,
       client_login_url: clientLoginUrl
     };
   } catch (error) {
@@ -644,7 +724,10 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
     return {
       user_name: "User",
       lesson_title: "Lesson",
-      client_login_url: "https://staysecure-learn.raynsecure.com/login"
+      client_login_url: buildLearnLoginUrl({
+        appBaseUrl: DEFAULT_LEARN_APP_BASE_URL,
+        clientId: "default"
+      })
     };
   }
 }
@@ -2180,19 +2263,21 @@ async function sendNotificationByEvent(supabase2, eventType, context) {
   }
 }
 async function gatherTemplateVariables(supabase2, eventType, context, templateText) {
-  const clientId = context.clientId;
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
-  const clientPath = clientId && clientId !== "default" ? `/${clientId}` : "";
-  const clientLoginUrl = `${origin}${clientPath}/login`;
+  const explicitClientId = context.clientId;
+  const appBase = typeof window !== "undefined" ? window.location.origin : (() => {
+    const b = EmailService.getInstance().getBaseUrl();
+    return b ? b.replace(/\/$/, "") : DEFAULT_LEARN_APP_BASE_URL;
+  })();
+  const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabase2, explicitClientId);
+  const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
   if (eventType === "lesson_completed" && context.lesson_id) {
     let variables2 = await gatherLessonCompletedVariables(supabase2, {
       user_id: context.user_id,
       lesson_id: context.lesson_id,
       learning_track_id: context.learning_track_id,
-      clientId,
+      clientId: resolvedClientId,
       next_lesson_available_date: context.next_lesson_available_date
     });
-    variables2 = { ...variables2, client_login_url: clientLoginUrl };
     if (templateText) {
       variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
     }
@@ -2555,13 +2640,20 @@ async function recordNotificationHistory(supabase2, data) {
   }
 }
 export {
+  DEFAULT_LEARN_APP_BASE_URL,
   EmailNotifications,
   EmailService,
   EmailTemplateManager,
+  RESERVED_LEARN_APP_PATH_PREFIXES,
   RecentEmailNotifications,
+  buildLearnLessonUrl,
+  buildLearnLoginUrl,
+  buildLearnPathPrefix,
   emailService,
   gatherLessonCompletedVariables,
   gatherTemplateVariables,
+  getLearnClientSlugFromBrowser,
+  resolveLearnClientIdForEmailUrls,
   sendNotificationByEvent,
   useNotifications
 };

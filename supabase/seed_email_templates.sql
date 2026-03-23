@@ -346,7 +346,7 @@ WHERE name = 'System Alert Email';
 -- Manager Notification - Employee Incomplete Lessons
 INSERT INTO email_templates (name, type, subject_template, html_body_template, is_active, is_system)
 SELECT 'Manager Notification - Employee Incomplete Lessons', 'manager_employee_incomplete',
-  '👥 Team Training Update: {{total_incomplete_count}} team member(s) with incomplete lessons',
+  '👥 Team Knowledge Update: Your team has incomplete lessons',
   '
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1f2937;">
   <h2 style="color: #0d9488;">👥 Team Knowledge Update</h2>
@@ -369,10 +369,10 @@ SELECT 'Manager Notification - Employee Incomplete Lessons', 'manager_employee_i
 WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE name = 'Manager Notification - Employee Incomplete Lessons');
 
 UPDATE email_templates
-SET subject_template   = '👥 Team Training Update: {{employee_name}} has incomplete lessons',
+SET subject_template   = '👥 Team Knowledge Update: Your team has incomplete lessons',
     html_body_template = '
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1f2937;">
-  <h2 style="color: #0d9488;">👥 Team Training Update</h2>
+  <h2 style="color: #0d9488;">👥 Team Knowledge Update</h2>
   <p>Hi {{manager_name}},</p>
   <p>The following members of your team have incomplete lessons:</p>
   <div style="background-color: #f0fdfa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0d9488;">

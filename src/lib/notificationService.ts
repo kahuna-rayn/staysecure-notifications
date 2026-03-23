@@ -13,7 +13,12 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { emailService, gatherLessonCompletedVariables } from './emailService';
+import { EmailService, emailService, gatherLessonCompletedVariables } from './emailService';
+import {
+  buildLearnLoginUrl,
+  DEFAULT_LEARN_APP_BASE_URL,
+  resolveLearnClientIdForEmailUrls,
+} from './learnUrls';
 
 export interface NotificationContext {
   user_id: string;
@@ -271,12 +276,17 @@ export async function gatherTemplateVariables(
   context: NotificationContext,
   templateText?: string
 ): Promise<Record<string, unknown>> {
-  const clientId = context.clientId;
-  const origin = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://staysecure-learn.raynsecure.com';
-  const clientPath = clientId && clientId !== 'default' ? `/${clientId}` : '';
-  const clientLoginUrl = `${origin}${clientPath}/login`;
+  const explicitClientId = context.clientId;
+  const appBase =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : (() => {
+          const b = EmailService.getInstance().getBaseUrl();
+          return b ? b.replace(/\/$/, '') : DEFAULT_LEARN_APP_BASE_URL;
+        })();
+
+  const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabase, explicitClientId);
+  const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
 
   // ── lesson_completed ──────────────────────────────────────────────────────
   if (eventType === 'lesson_completed' && context.lesson_id) {
@@ -284,10 +294,9 @@ export async function gatherTemplateVariables(
       user_id: context.user_id,
       lesson_id: context.lesson_id,
       learning_track_id: context.learning_track_id,
-      clientId,
+      clientId: resolvedClientId,
       next_lesson_available_date: context.next_lesson_available_date,
     });
-    variables = { ...variables, client_login_url: clientLoginUrl };
     if (templateText) {
       variables = await mergeWithLookup(supabase, variables, templateText, context);
     }
