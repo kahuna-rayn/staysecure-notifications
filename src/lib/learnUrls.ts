@@ -95,6 +95,21 @@ export function buildLearnLoginUrl(options: BuildLearnLoginUrlOptions): string {
   return `${base}/`;
 }
 
+/**
+ * Deep link into a specific lesson inside a track.
+ * Matches UserDashboard's ?track=&lesson= deep-link pattern and send-lesson-reminders.
+ * Preferred over buildLearnLessonUrl for all email links.
+ */
+export function buildLearnTrackLessonDeepLinkUrl(
+  options: BuildLearnLoginUrlOptions & { learningTrackId: string; lessonId: string }
+): string {
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+  const prefix = buildLearnPathPrefix(options.clientId);
+  const q = new URLSearchParams({ track: options.learningTrackId, lesson: options.lessonId });
+  return `${base}${prefix}/?${q.toString()}`;
+}
+
+/** @deprecated Use buildLearnTrackLessonDeepLinkUrl — `/lesson/:id` is not a router route */
 export function buildLearnLessonUrl(
   options: BuildLearnLoginUrlOptions & { lessonId: string }
 ): string {

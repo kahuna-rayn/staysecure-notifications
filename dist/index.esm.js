@@ -335,6 +335,12 @@ function buildLearnLoginUrl(options) {
   }
   return `${base}/`;
 }
+function buildLearnTrackLessonDeepLinkUrl(options) {
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+  const prefix = buildLearnPathPrefix(options.clientId);
+  const q = new URLSearchParams({ track: options.learningTrackId, lesson: options.lessonId });
+  return `${base}${prefix}/?${q.toString()}`;
+}
 function buildLearnLessonUrl(options) {
   const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
   const prefix = buildLearnPathPrefix(options.clientId);
@@ -681,11 +687,6 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
     })();
     const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabaseClient, event.clientId);
     const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
-    const lessonUrl = buildLearnLessonUrl({
-      appBaseUrl: appBase,
-      clientId: resolvedClientId,
-      lessonId: event.lesson_id
-    });
     let trackTitle = "";
     let trackDescription = "";
     let lessonsCompleted = 0;
@@ -720,7 +721,12 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
       lesson_title: (lesson == null ? void 0 : lesson.title) || "Lesson",
       lesson_description: (lesson == null ? void 0 : lesson.description) || "",
       lesson_duration: (lesson == null ? void 0 : lesson.duration_minutes) ? `${lesson.duration_minutes} min` : "",
-      lesson_url: lessonUrl,
+      lesson_url: event.learning_track_id ? buildLearnTrackLessonDeepLinkUrl({
+        appBaseUrl: appBase,
+        clientId: resolvedClientId,
+        learningTrackId: event.learning_track_id,
+        lessonId: event.lesson_id
+      }) : clientLoginUrl,
       learning_track_title: trackTitle,
       learning_track_description: trackDescription,
       completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
@@ -732,9 +738,10 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
       next_lesson_title: (nextLesson == null ? void 0 : nextLesson.title) || null,
       next_lesson_available: !!nextLesson,
       next_lesson_available_date: nextAvailableDate,
-      next_lesson_url: nextLesson ? buildLearnLessonUrl({
+      next_lesson_url: nextLesson && event.learning_track_id ? buildLearnTrackLessonDeepLinkUrl({
         appBaseUrl: appBase,
         clientId: resolvedClientId,
+        learningTrackId: event.learning_track_id,
         lessonId: nextLesson.id
       }) : clientLoginUrl,
       client_login_url: clientLoginUrl
@@ -2669,6 +2676,7 @@ export {
   buildLearnLessonUrl,
   buildLearnLoginUrl,
   buildLearnPathPrefix,
+  buildLearnTrackLessonDeepLinkUrl,
   emailService,
   gatherLessonCompletedVariables,
   gatherTemplateVariables,

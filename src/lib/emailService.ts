@@ -1,7 +1,7 @@
 // Email service using Lambda + SES for better security
 
 import {
-  buildLearnLessonUrl,
+  buildLearnTrackLessonDeepLinkUrl,
   buildLearnLoginUrl,
   DEFAULT_LEARN_APP_BASE_URL,
   resolveLearnClientIdForEmailUrls,
@@ -546,11 +546,6 @@ export async function gatherLessonCompletedVariables(
 
     const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabaseClient, event.clientId);
     const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
-    const lessonUrl = buildLearnLessonUrl({
-      appBaseUrl: appBase,
-      clientId: resolvedClientId,
-      lessonId: event.lesson_id,
-    });
 
     // Get learning track info if available
     let trackTitle = '';
@@ -630,7 +625,14 @@ export async function gatherLessonCompletedVariables(
       lesson_title: lesson?.title || 'Lesson',
       lesson_description: lesson?.description || '',
       lesson_duration: lesson?.duration_minutes ? `${lesson.duration_minutes} min` : '',
-      lesson_url: lessonUrl,
+      lesson_url: event.learning_track_id
+        ? buildLearnTrackLessonDeepLinkUrl({
+            appBaseUrl: appBase,
+            clientId: resolvedClientId,
+            learningTrackId: event.learning_track_id,
+            lessonId: event.lesson_id,
+          })
+        : clientLoginUrl,
       learning_track_title: trackTitle,
       learning_track_description: trackDescription,
       completion_date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -642,10 +644,11 @@ export async function gatherLessonCompletedVariables(
       next_lesson_title: nextLesson?.title || null,
       next_lesson_available: !!nextLesson,
       next_lesson_available_date: nextAvailableDate,
-      next_lesson_url: nextLesson
-        ? buildLearnLessonUrl({
+      next_lesson_url: nextLesson && event.learning_track_id
+        ? buildLearnTrackLessonDeepLinkUrl({
             appBaseUrl: appBase,
             clientId: resolvedClientId,
+            learningTrackId: event.learning_track_id,
             lessonId: nextLesson.id,
           })
         : clientLoginUrl,

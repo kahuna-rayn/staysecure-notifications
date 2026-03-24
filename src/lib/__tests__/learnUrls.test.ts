@@ -2,6 +2,7 @@ import {
   buildLearnLessonUrl,
   buildLearnLoginUrl,
   buildLearnPathPrefix,
+  buildLearnTrackLessonDeepLinkUrl,
   normalizeLearnAppBaseUrl,
   RESERVED_LEARN_APP_PATH_PREFIXES,
 } from '../learnUrls';
@@ -72,6 +73,30 @@ describe('learnUrls', () => {
     it('returns slug path for tenants', () => {
       expect(buildLearnPathPrefix('nexus')).toBe('/nexus');
       expect(buildLearnPathPrefix('NEXUS')).toBe('/nexus');
+    });
+  });
+
+  describe('buildLearnTrackLessonDeepLinkUrl', () => {
+    it('builds ?track=&lesson= deep link for a tenant', () => {
+      expect(
+        buildLearnTrackLessonDeepLinkUrl({
+          appBaseUrl: 'https://staysecure-learn.raynsecure.com',
+          clientId: 'nexus',
+          learningTrackId: 'track-1',
+          lessonId: 'lesson-42',
+        })
+      ).toBe('https://staysecure-learn.raynsecure.com/nexus/?track=track-1&lesson=lesson-42');
+    });
+
+    it('omits tenant prefix for dev', () => {
+      expect(
+        buildLearnTrackLessonDeepLinkUrl({
+          appBaseUrl: 'https://dev.staysecure-learn.raynsecure.com',
+          clientId: 'dev',
+          learningTrackId: 'track-1',
+          lessonId: 'lesson-42',
+        })
+      ).toBe('https://dev.staysecure-learn.raynsecure.com/?track=track-1&lesson=lesson-42');
     });
   });
 
