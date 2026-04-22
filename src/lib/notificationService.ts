@@ -670,6 +670,27 @@ export async function gatherTemplateVariables(
     return variables;
   }
 
+  // ── license_near_capacity ─────────────────────────────────────────────────
+  if (eventType === 'license_near_capacity') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', context.user_id)
+      .maybeSingle();
+
+    let variables: Record<string, unknown> = {
+      admin_name: profile?.full_name || 'Administrator',
+      used_seats: context.used_seats ?? '',
+      total_seats: context.total_seats ?? '',
+      pct_used: context.pct_used ?? '',
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
   // ── default: spread context + look up any missing template variables ──────
   let variables: Record<string, unknown> = {
     user_id: context.user_id,

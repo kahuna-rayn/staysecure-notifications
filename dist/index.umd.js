@@ -2548,6 +2548,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return variables2;
     }
+    if (eventType === "license_near_capacity") {
+      const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+      let variables2 = {
+        admin_name: (profile == null ? void 0 : profile.full_name) || "Administrator",
+        used_seats: context.used_seats ?? "",
+        total_seats: context.total_seats ?? "",
+        pct_used: context.pct_used ?? "",
+        client_login_url: clientLoginUrl
+      };
+      if (templateText) {
+        variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+      }
+      return variables2;
+    }
     let variables = {
       user_id: context.user_id,
       client_login_url: clientLoginUrl,
