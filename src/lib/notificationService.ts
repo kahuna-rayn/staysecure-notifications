@@ -68,11 +68,11 @@ export async function sendNotificationByEvent(
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username')
+      .select('email')
       .eq('id', user_id)
       .single();
 
-    const userEmail = profile?.username;
+    const userEmail = profile?.email;
     if (!userEmail) {
       console.warn(`Cannot send ${eventType} notification: no email for user ${user_id}`);
       await supabase.from('notification_history').insert({
@@ -80,7 +80,7 @@ export async function sendNotificationByEvent(
         trigger_event: eventType,
         status: 'skipped',
         skip_reason: 'no_email',
-        error_message: `No email found in profiles.username for user ${user_id}`,
+        error_message: `No email found in profiles.email for user ${user_id}`,
         template_variables: context,
       });
       return;
@@ -512,13 +512,13 @@ export async function gatherTemplateVariables(
 
     const { data: pendingStaff } = await supabase
       .from('profiles')
-      .select('full_name, username, created_at')
+      .select('full_name, email, created_at')
       .eq('manager', context.user_id)
       .eq('status', 'Pending');
 
-    const pendingEmployees = (pendingStaff || []).map((p: { full_name?: string; username?: string; created_at?: string }) => ({
+    const pendingEmployees = (pendingStaff || []).map((p: { full_name?: string; email?: string; created_at?: string }) => ({
       full_name: p.full_name || 'Team member',
-      email: p.username || '',
+      email: p.email || '',
       invited_at: p.created_at
         ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         : '',
