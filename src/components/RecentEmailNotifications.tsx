@@ -99,10 +99,9 @@ export default function RecentEmailNotifications({
       const userIds = [...new Set(notifications.map((n: any) => n.user_id))];
 
       // Fetch user emails from profiles
-      // Note: email is stored in username field in profiles table
       const { data: profiles, error: profilesError } = await supabaseClient
         .from('profiles')
-        .select('id, username')
+        .select('id, email')
         .in('id', userIds);
 
       if (profilesError) {
@@ -110,11 +109,10 @@ export default function RecentEmailNotifications({
       }
 
       // Create a map of user_id -> email
-      // Note: username field stores the email address
       const emailMap = new Map<string, string>();
       profiles?.forEach((profile: any) => {
-        if (profile.username) {
-          emailMap.set(profile.id, profile.username);
+        if (profile.email) {
+          emailMap.set(profile.id, profile.email);
         }
       });
       
