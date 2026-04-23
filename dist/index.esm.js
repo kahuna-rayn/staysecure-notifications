@@ -272,6 +272,98 @@ const User = createLucideIcon("User", [
   ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
   ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
 ]);
+const DEFAULT_LEARN_APP_BASE_URL = "https://staysecure-learn.raynsecure.com";
+function normalizeLearnAppBaseUrl(input) {
+  const trimmed = input.trim().replace(/\/$/, "");
+  try {
+    const u = new URL(trimmed);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return trimmed;
+  }
+}
+function normalizeClientSegmentForUrl(clientId) {
+  const raw = (clientId || "default").trim() || "default";
+  const lower = raw.toLowerCase();
+  if (lower === "dev" || lower === "staging") {
+    return { kind: "env", segment: lower };
+  }
+  if (lower === "default") {
+    return { kind: "default", segment: "default" };
+  }
+  return { kind: "tenant", segment: lower };
+}
+const RESERVED_LEARN_APP_PATH_PREFIXES = /* @__PURE__ */ new Set([
+  "admin",
+  "forgot-password",
+  "reset-password",
+  "activate-account",
+  "email-notifications"
+]);
+function getLearnClientSlugFromBrowser() {
+  if (typeof window === "undefined") return null;
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  if (pathParts.length === 0) return null;
+  const first = pathParts[0];
+  if (!RESERVED_LEARN_APP_PATH_PREFIXES.has(first)) {
+    return first;
+  }
+  const last = sessionStorage.getItem("lastBasePath");
+  if (last && last !== "/") {
+    const slug = last.replace(/^\//, "").split("/")[0];
+    if (slug && !RESERVED_LEARN_APP_PATH_PREFIXES.has(slug)) {
+      return slug;
+    }
+  }
+  return null;
+}
+function buildLearnPathPrefix(clientId) {
+  const norm = normalizeClientSegmentForUrl(clientId);
+  if (norm.kind === "tenant") {
+    return `/${norm.segment}`;
+  }
+  return "";
+}
+function buildLearnLoginUrl(options) {
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+  const norm = normalizeClientSegmentForUrl(options.clientId);
+  if (norm.kind === "env") {
+    return `${base}/`;
+  }
+  if (norm.kind === "tenant") {
+    return `${base}/${norm.segment}`;
+  }
+  return `${base}/`;
+}
+function buildLearnTrackLessonDeepLinkUrl(options) {
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+  const prefix = buildLearnPathPrefix(options.clientId);
+  const q = new URLSearchParams({ track: options.learningTrackId, lesson: options.lessonId });
+  return `${base}${prefix}/?${q.toString()}`;
+}
+function buildLearnLessonUrl(options) {
+  const base = normalizeLearnAppBaseUrl(options.appBaseUrl || DEFAULT_LEARN_APP_BASE_URL);
+  const prefix = buildLearnPathPrefix(options.clientId);
+  return `${base}${prefix}/lesson/${options.lessonId}`;
+}
+async function resolveLearnClientIdForEmailUrls(supabase2, explicitClientId) {
+  if (explicitClientId && explicitClientId !== "default") {
+    return explicitClientId;
+  }
+  const fromBrowser = getLearnClientSlugFromBrowser();
+  if (fromBrowser) {
+    return fromBrowser;
+  }
+  try {
+    const { data } = await supabase2.from("org_profile").select("org_short_name").limit(1).maybeSingle();
+    const name = data == null ? void 0 : data.org_short_name;
+    if (name) {
+      return name;
+    }
+  } catch {
+  }
+  return "default";
+}
 const _EmailService = class _EmailService {
   constructor() {
     __publicField(this, "defaultFrom");
@@ -293,6 +385,10 @@ const _EmailService = class _EmailService {
     if (config.baseUrl) {
       instance.baseUrl = config.baseUrl;
     }
+  }
+  /** Base URL for emails when `window` is unavailable (e.g. template preview). */
+  getBaseUrl() {
+    return this.baseUrl;
   }
   // Helper method to generate lesson URLs
   generateLessonUrl(lessonId, clientPath) {
@@ -535,7 +631,7 @@ const _EmailService = class _EmailService {
       } else {
         const isFalse = (v) => v === false;
         if (normalizedType.startsWith("track_") || normalizedType.includes("course")) {
-          const flag = data.track_completions ?? data.course_completions;
+          const flag = data.track_completions ?? data.track_completions;
           if (isFalse(flag)) return { allow: false, reason: "track_completions_disabled" };
         }
         if (normalizedType.startsWith("quiz_") || normalizedType.includes("achievement")) {
@@ -584,51 +680,70 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
   var _a;
   try {
     const { data: user } = await supabaseClient.from("profiles").select("full_name, username").eq("id", event.user_id).single();
-    const { data: lesson } = await supabaseClient.from("lessons").select("title, description").eq("id", event.lesson_id).single();
-    let track = null;
-    let progress = null;
+    const { data: lesson } = await supabaseClient.from("lessons").select("title, description, duration_minutes").eq("id", event.lesson_id).single();
+    const appBase = typeof window !== "undefined" ? window.location.origin : (() => {
+      const b = EmailService.getInstance().getBaseUrl();
+      return b ? b.replace(/\/$/, "") : DEFAULT_LEARN_APP_BASE_URL;
+    })();
+    const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabaseClient, event.clientId);
+    const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
+    let trackTitle = "";
+    let trackDescription = "";
     let lessonsCompleted = 0;
     let totalLessons = 0;
     let nextLesson = null;
     if (event.learning_track_id) {
-      track = await supabaseClient.from("learning_tracks").select("title").eq("id", event.learning_track_id).single();
-      progress = await supabaseClient.from("user_learning_track_progress").select("current_lesson_order").eq("user_id", event.user_id).eq("learning_track_id", event.learning_track_id).maybeSingle();
+      const { data: track } = await supabaseClient.from("learning_tracks").select("title, description").eq("id", event.learning_track_id).single();
+      trackTitle = (track == null ? void 0 : track.title) || "";
+      trackDescription = (track == null ? void 0 : track.description) || "";
       const { data: completedLessons } = await supabaseClient.from("user_lesson_progress").select("lesson_id").eq("user_id", event.user_id).not("completed_at", "is", null);
       const { data: trackLessons } = await supabaseClient.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", event.learning_track_id);
       totalLessons = (trackLessons == null ? void 0 : trackLessons.length) || 0;
-      const completedInTrack = (completedLessons == null ? void 0 : completedLessons.filter(
+      lessonsCompleted = (completedLessons == null ? void 0 : completedLessons.filter(
         (cl) => trackLessons == null ? void 0 : trackLessons.some((tl) => tl.lesson_id === cl.lesson_id)
       ).length) || 0;
-      lessonsCompleted = completedInTrack;
-      const currentOrder = (progress == null ? void 0 : progress.current_lesson_order) || 0;
-      const { data: nextLessonData } = await supabaseClient.from("learning_track_lessons").select("lesson_id, order_index, lessons(title)").eq("learning_track_id", event.learning_track_id).gt("order_index", currentOrder).order("order_index").limit(1).maybeSingle();
-      if (nextLessonData) {
-        nextLesson = {
-          title: ((_a = nextLessonData.lessons) == null ? void 0 : _a.title) || "Next Lesson",
-          id: nextLessonData.lesson_id
-        };
+      const { data: currentTrackLesson } = await supabaseClient.from("learning_track_lessons").select("order_index").eq("learning_track_id", event.learning_track_id).eq("lesson_id", event.lesson_id).maybeSingle();
+      if (currentTrackLesson) {
+        const { data: nextLessonData } = await supabaseClient.from("learning_track_lessons").select("lesson_id, order_index, lessons(title)").eq("learning_track_id", event.learning_track_id).gt("order_index", currentTrackLesson.order_index).order("order_index").limit(1).maybeSingle();
+        if (nextLessonData) {
+          nextLesson = {
+            title: ((_a = nextLessonData.lessons) == null ? void 0 : _a.title) || "Next Lesson",
+            id: nextLessonData.lesson_id
+          };
+        }
       }
     }
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
-    const clientId = event.clientId || "default";
-    const clientPath = clientId !== "default" ? `/${clientId}` : "";
-    const clientLoginUrl = `${origin}${clientPath}/login`;
     const trackProgressPercentage = totalLessons > 0 ? Math.round(lessonsCompleted / totalLessons * 100) : 0;
+    const nextAvailableDate = event.next_lesson_available_date ? new Date(event.next_lesson_available_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
     return {
       user_name: (user == null ? void 0 : user.full_name) || "User",
       user_email: (user == null ? void 0 : user.username) || "",
       lesson_title: (lesson == null ? void 0 : lesson.title) || "Lesson",
       lesson_description: (lesson == null ? void 0 : lesson.description) || "",
-      learning_track_title: (track == null ? void 0 : track.title) || "",
-      completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US"),
+      lesson_duration: (lesson == null ? void 0 : lesson.duration_minutes) ? `${lesson.duration_minutes} min` : "",
+      lesson_url: event.learning_track_id ? buildLearnTrackLessonDeepLinkUrl({
+        appBaseUrl: appBase,
+        clientId: resolvedClientId,
+        learningTrackId: event.learning_track_id,
+        lessonId: event.lesson_id
+      }) : clientLoginUrl,
+      learning_track_title: trackTitle,
+      learning_track_description: trackDescription,
+      completion_date: (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
       completion_time: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      completion_percentage: trackProgressPercentage,
       lessons_completed_in_track: lessonsCompleted,
       total_lessons_in_track: totalLessons,
       track_progress_percentage: trackProgressPercentage,
       next_lesson_title: (nextLesson == null ? void 0 : nextLesson.title) || null,
       next_lesson_available: !!nextLesson,
-      next_lesson_url: clientLoginUrl,
-      // Always use login URL as per requirement
+      next_lesson_available_date: nextAvailableDate,
+      next_lesson_url: nextLesson && event.learning_track_id ? buildLearnTrackLessonDeepLinkUrl({
+        appBaseUrl: appBase,
+        clientId: resolvedClientId,
+        learningTrackId: event.learning_track_id,
+        lessonId: nextLesson.id
+      }) : clientLoginUrl,
       client_login_url: clientLoginUrl
     };
   } catch (error) {
@@ -636,7 +751,10 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
     return {
       user_name: "User",
       lesson_title: "Lesson",
-      client_login_url: "https://staysecure-learn.raynsecure.com/login"
+      client_login_url: buildLearnLoginUrl({
+        appBaseUrl: DEFAULT_LEARN_APP_BASE_URL,
+        clientId: "default"
+      })
     };
   }
 }
@@ -2051,7 +2169,20 @@ async function sendNotificationByEvent(supabase2, eventType, context) {
       console.debug(`[notifications] No active rules for event: ${eventType}`);
       return;
     }
-    for (const rule of rules) {
+    const dedupeWindowMinutes = 5;
+    if (["lesson_completed", "track_completed"].includes(eventType)) {
+      const dedupeKey = eventType === "lesson_completed" ? context.lesson_id : context.learning_track_id;
+      if (dedupeKey) {
+        const cutoff = new Date(Date.now() - dedupeWindowMinutes * 60 * 1e3).toISOString();
+        const { data: recent } = await supabase2.from("notification_history").select("id").eq("user_id", user_id).eq("trigger_event", eventType).eq("status", "sent").gte("sent_at", cutoff).limit(1);
+        if (recent && recent.length > 0) {
+          console.debug(`[notifications] Skipping duplicate ${eventType} for user ${user_id} (recent send within ${dedupeWindowMinutes}m)`);
+          return;
+        }
+      }
+    }
+    const rulesToProcess = ["lesson_completed", "track_completed"].includes(eventType) && rules.length > 1 ? rules.slice(0, 1) : rules;
+    for (const rule of rulesToProcess) {
       try {
         if (rule.trigger_conditions && !checkTriggerConditions(rule.trigger_conditions, context)) {
           console.debug(`[notifications] Trigger conditions not met for rule ${rule.name}`);
@@ -2088,12 +2219,15 @@ async function sendNotificationByEvent(supabase2, eventType, context) {
         }
         let typeEnabled = true;
         let skipReason = "";
-        if (["lesson_completed", "track_milestone_50", "track_completed"].includes(eventType)) {
+        if (["lesson_completed", "track_milestone_50", "track_completed", "course_completion"].includes(eventType)) {
           typeEnabled = preferences.track_completions !== false;
           if (!typeEnabled) skipReason = `${preferenceSource}_track_completions_disabled`;
-        } else if (eventType === "quiz_high_score" || eventType.startsWith("quiz_")) {
+        } else if (eventType === "quiz_high_score" || eventType === "achievement" || eventType.startsWith("quiz_")) {
           typeEnabled = preferences.achievements !== false;
           if (!typeEnabled) skipReason = `${preferenceSource}_achievements_disabled`;
+        } else if (eventType === "lesson_reminder") {
+          typeEnabled = preferences.lesson_reminders !== false;
+          if (!typeEnabled) skipReason = `${preferenceSource}_lesson_reminders_disabled`;
         } else if (eventType === "document_assigned") {
           const pref = preferences.document_notifications;
           typeEnabled = pref !== false;
@@ -2156,18 +2290,21 @@ async function sendNotificationByEvent(supabase2, eventType, context) {
   }
 }
 async function gatherTemplateVariables(supabase2, eventType, context, templateText) {
-  const clientId = context.clientId;
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://staysecure-learn.raynsecure.com";
-  const clientPath = clientId && clientId !== "default" ? `/${clientId}` : "";
-  const clientLoginUrl = `${origin}${clientPath}/login`;
+  const explicitClientId = context.clientId;
+  const appBase = typeof window !== "undefined" ? window.location.origin : (() => {
+    const b = EmailService.getInstance().getBaseUrl();
+    return b ? b.replace(/\/$/, "") : DEFAULT_LEARN_APP_BASE_URL;
+  })();
+  const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabase2, explicitClientId);
+  const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
   if (eventType === "lesson_completed" && context.lesson_id) {
     let variables2 = await gatherLessonCompletedVariables(supabase2, {
       user_id: context.user_id,
       lesson_id: context.lesson_id,
       learning_track_id: context.learning_track_id,
-      clientId
+      clientId: resolvedClientId,
+      next_lesson_available_date: context.next_lesson_available_date
     });
-    variables2 = { ...variables2, client_login_url: clientLoginUrl };
     if (templateText) {
       variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
     }
@@ -2175,7 +2312,7 @@ async function gatherTemplateVariables(supabase2, eventType, context, templateTe
   }
   if ((eventType === "track_milestone_50" || eventType === "track_completed") && context.learning_track_id) {
     const { data: trackProgress } = await supabase2.from("user_learning_track_progress").select("progress_percentage, enrolled_at, started_at").eq("user_id", context.user_id).eq("learning_track_id", context.learning_track_id).single();
-    const { data: track } = await supabase2.from("learning_tracks").select("title").eq("id", context.learning_track_id).single();
+    const { data: track } = await supabase2.from("learning_tracks").select("title, description").eq("id", context.learning_track_id).single();
     const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
     const { data: completedLessons } = await supabase2.from("user_lesson_progress").select("lesson_id").eq("user_id", context.user_id).not("completed_at", "is", null);
     const { data: trackLessons } = await supabase2.from("learning_track_lessons").select("lesson_id").eq("learning_track_id", context.learning_track_id);
@@ -2192,13 +2329,20 @@ async function gatherTemplateVariables(supabase2, eventType, context, templateTe
       );
       timeSpentHours = Math.round(totalMs / (1e3 * 60 * 60) * 10) / 10;
     }
+    const completionDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const completionTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    const progressPct = (trackProgress == null ? void 0 : trackProgress.progress_percentage) || 0;
     let variables2 = {
       user_name: (profile == null ? void 0 : profile.full_name) || "User",
       learning_track_title: (track == null ? void 0 : track.title) || "Learning Track",
-      track_progress_percentage: (trackProgress == null ? void 0 : trackProgress.progress_percentage) || 0,
+      learning_track_description: (track == null ? void 0 : track.description) || "",
+      track_progress_percentage: progressPct,
+      completion_percentage: progressPct,
       lessons_completed_in_track: lessonsCompletedInTrack,
       total_lessons_in_track: totalLessons,
       time_spent_hours: timeSpentHours,
+      completion_date: completionDate,
+      completion_time: completionTime,
       client_login_url: clientLoginUrl
     };
     if (templateText) {
@@ -2232,10 +2376,16 @@ async function gatherTemplateVariables(supabase2, eventType, context, templateTe
       else if (minutes > 0) completionTime = `${minutes} minute${minutes !== 1 ? "s" : ""}`;
       else completionTime = `${seconds} second${seconds !== 1 ? "s" : ""}`;
     }
+    const quizScore = context.score || 0;
+    const quizCompletionDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     let variables2 = {
       user_name: (profile == null ? void 0 : profile.full_name) || "User",
       quiz_title: lesson.title || "Quiz",
-      score: context.score || 0,
+      lesson_title: lesson.title || "Quiz",
+      score: quizScore,
+      completion_score: quizScore,
+      completion_percentage: quizScore,
+      completion_date: quizCompletionDate,
       correct_answers: correctAnswers,
       total_questions: totalQuestions,
       completion_time: completionTime,
@@ -2248,19 +2398,25 @@ async function gatherTemplateVariables(supabase2, eventType, context, templateTe
     }
     return variables2;
   }
-  if (eventType === "document_assigned") {
-    const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).single();
+  if (eventType === "document_assigned" || eventType === "documents") {
+    const [{ data: profile }, { data: document2 }] = await Promise.all([
+      supabase2.from("profiles").select("full_name").eq("id", context.user_id).single(),
+      context.document_id ? supabase2.from("documents").select("url").eq("document_id", context.document_id).single() : Promise.resolve({ data: null })
+    ]);
     const dueDays = context.due_days || 0;
     const dueDate = dueDays > 0 ? (() => {
       const d = /* @__PURE__ */ new Date();
       d.setDate(d.getDate() + dueDays);
       return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     })() : "No due date";
+    const externalUrl = document2 == null ? void 0 : document2.url;
+    const documentUrl = externalUrl || (context.document_id ? `${clientLoginUrl}?doc=${context.document_id}` : clientLoginUrl);
     return {
       user_name: (profile == null ? void 0 : profile.full_name) || "User",
       document_title: context.document_title || "",
       due_date: dueDate,
       due_days: dueDays,
+      document_url: documentUrl,
       login_url: clientLoginUrl,
       client_login_url: clientLoginUrl
     };
@@ -2280,28 +2436,125 @@ async function gatherTemplateVariables(supabase2, eventType, context, templateTe
       client_login_url: clientLoginUrl
     };
   }
+  if (eventType === "manager_staff_pending") {
+    const { data: managerProfile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+    const { data: pendingStaff } = await supabase2.from("profiles").select("full_name, username, created_at").eq("manager", context.user_id).eq("status", "Pending");
+    const pendingEmployees = (pendingStaff || []).map((p) => ({
+      full_name: p.full_name || "Team member",
+      email: p.username || "",
+      invited_at: p.created_at ? new Date(p.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : ""
+    }));
+    let variables2 = {
+      manager_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager",
+      pending_count: pendingEmployees.length,
+      pending_employees: pendingEmployees,
+      client_login_url: clientLoginUrl
+    };
+    if (templateText) {
+      variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+    }
+    return variables2;
+  }
   if (eventType === "manager_employee_incomplete") {
     const managerId = context.manager_id || context.user_id;
     const { data: managerProfile } = await supabase2.from("profiles").select("full_name").eq("id", managerId).single();
-    const { data: employeeProfile } = await supabase2.from("profiles").select("full_name, username").neq("id", managerId).limit(1).single();
-    const { data: sampleLessons } = await supabase2.from("lessons").select("id, title").limit(3);
-    const incompleteLessons = (sampleLessons || []).map((l) => ({
-      lesson_title: l.title,
-      learning_track_title: "Cybersecurity Fundamentals",
-      due_date: null
-    }));
-    const employeeName = (employeeProfile == null ? void 0 : employeeProfile.full_name) || "Employee Name";
-    const employeeEmail = (employeeProfile == null ? void 0 : employeeProfile.username) || "employee@example.com";
+    const { data: sampleEmployees } = await supabase2.from("profiles").select("full_name").neq("id", managerId).limit(2);
+    const incompleteEmployees = (sampleEmployees || []).map(
+      (p, i) => ({
+        full_name: p.full_name || `Team Member ${i + 1}`,
+        incomplete_count: i + 1
+      })
+    );
+    const firstEmployee = incompleteEmployees[0];
     let variables2 = {
       manager_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager Name",
-      employee_name: employeeName,
-      employee_email: employeeEmail,
-      user_name: employeeName,
-      user_email: employeeEmail,
+      employee_name: (firstEmployee == null ? void 0 : firstEmployee.full_name) || "Team Member",
+      user_name: (managerProfile == null ? void 0 : managerProfile.full_name) || "Manager Name",
       reminder_attempts: 3,
       multiple_attempts: true,
-      incomplete_lessons: incompleteLessons,
-      total_incomplete_count: incompleteLessons.length,
+      incomplete_employees: incompleteEmployees,
+      total_incomplete_count: incompleteEmployees.length,
+      client_login_url: clientLoginUrl
+    };
+    if (templateText) {
+      variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+    }
+    return variables2;
+  }
+  if (eventType === "achievement") {
+    const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+    const achievementDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    let achievementName = context.achievement_name || "";
+    let achievementDescription = context.achievement_description || "";
+    if (!achievementName && context.certificate_id) {
+      const { data: cert } = await supabase2.from("certificates").select("name, type").eq("id", context.certificate_id).maybeSingle();
+      achievementName = (cert == null ? void 0 : cert.name) || "";
+      achievementDescription = (cert == null ? void 0 : cert.type) || "";
+    }
+    let variables2 = {
+      user_name: (profile == null ? void 0 : profile.full_name) || "User",
+      achievement_name: achievementName,
+      achievement_description: achievementDescription,
+      achievement_date: achievementDate,
+      client_login_url: clientLoginUrl
+    };
+    if (templateText) {
+      variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+    }
+    return variables2;
+  }
+  if (eventType === "course_completion") {
+    const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+    let courseName = "";
+    if (context.lesson_id) {
+      const { data: lessonData } = await supabase2.from("lessons").select("title").eq("id", context.lesson_id).maybeSingle();
+      courseName = (lessonData == null ? void 0 : lessonData.title) || "";
+    }
+    const completionDate = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    let variables2 = {
+      user_name: (profile == null ? void 0 : profile.full_name) || "User",
+      course_name: courseName,
+      completion_date: completionDate,
+      score: context.score ?? 0,
+      client_login_url: clientLoginUrl
+    };
+    if (templateText) {
+      variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+    }
+    return variables2;
+  }
+  if (eventType === "lesson_reminder") {
+    const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+    let lessonTitle = "";
+    let trackTitle = "";
+    const targetLessonId = context.next_lesson_id || context.lesson_id;
+    if (targetLessonId) {
+      const { data: lessonData } = await supabase2.from("lessons").select("title").eq("id", targetLessonId).maybeSingle();
+      lessonTitle = (lessonData == null ? void 0 : lessonData.title) || "";
+    }
+    if (context.learning_track_id) {
+      const { data: trackData } = await supabase2.from("learning_tracks").select("title").eq("id", context.learning_track_id).maybeSingle();
+      trackTitle = (trackData == null ? void 0 : trackData.title) || "";
+    }
+    let variables2 = {
+      user_name: (profile == null ? void 0 : profile.full_name) || "User",
+      lesson_title: lessonTitle,
+      learning_track_title: trackTitle,
+      next_lesson_available_date: context.next_lesson_available_date || "",
+      client_login_url: clientLoginUrl
+    };
+    if (templateText) {
+      variables2 = await mergeWithLookup(supabase2, variables2, templateText, context);
+    }
+    return variables2;
+  }
+  if (eventType === "license_near_capacity") {
+    const { data: profile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
+    let variables2 = {
+      admin_name: (profile == null ? void 0 : profile.full_name) || "Administrator",
+      used_seats: context.used_seats ?? "",
+      total_seats: context.total_seats ?? "",
+      pct_used: context.pct_used ?? "",
       client_login_url: clientLoginUrl
     };
     if (templateText) {
@@ -2428,13 +2681,22 @@ async function recordNotificationHistory(supabase2, data) {
   }
 }
 export {
+  DEFAULT_LEARN_APP_BASE_URL,
   EmailNotifications,
   EmailService,
   EmailTemplateManager,
+  RESERVED_LEARN_APP_PATH_PREFIXES,
   RecentEmailNotifications,
+  buildLearnLessonUrl,
+  buildLearnLoginUrl,
+  buildLearnPathPrefix,
+  buildLearnTrackLessonDeepLinkUrl,
   emailService,
   gatherLessonCompletedVariables,
   gatherTemplateVariables,
+  getLearnClientSlugFromBrowser,
+  normalizeLearnAppBaseUrl,
+  resolveLearnClientIdForEmailUrls,
   sendNotificationByEvent,
   useNotifications
 };

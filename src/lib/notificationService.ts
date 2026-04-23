@@ -13,11 +13,17 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { emailService, gatherLessonCompletedVariables } from './emailService';
+import { EmailService, emailService, gatherLessonCompletedVariables } from './emailService';
+import {
+  buildLearnLoginUrl,
+  DEFAULT_LEARN_APP_BASE_URL,
+  resolveLearnClientIdForEmailUrls,
+} from './learnUrls';
 
 export interface NotificationContext {
   user_id: string;
   lesson_id?: string;
+  next_lesson_id?: string;
   learning_track_id?: string;
   task_id?: string;
   review_id?: string;
@@ -30,6 +36,8 @@ export interface NotificationContext {
   manager_id?: string;
   document_title?: string;
   due_days?: number;
+  /** Pre-computed next lesson available date (ISO string) from LearningTrackViewer scheduling logic */
+  next_lesson_available_date?: string | null;
   /** Client ID (e.g. "nexus"). Pass explicitly — do NOT rely on window.location here. */
   clientId?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,11 +68,11 @@ export async function sendNotificationByEvent(
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username')
+      .select('email')
       .eq('id', user_id)
       .single();
 
-    const userEmail = profile?.username;
+    const userEmail = profile?.email;
     if (!userEmail) {
       console.warn(`Cannot send ${eventType} notification: no email for user ${user_id}`);
       await supabase.from('notification_history').insert({
@@ -72,7 +80,7 @@ export async function sendNotificationByEvent(
         trigger_event: eventType,
         status: 'skipped',
         skip_reason: 'no_email',
-        error_message: `No email found in profiles.username for user ${user_id}`,
+        error_message: `No email found in profiles.email for user ${user_id}`,
         template_variables: context,
       });
       return;
@@ -95,7 +103,36 @@ export async function sendNotificationByEvent(
       return;
     }
 
-    for (const rule of rules) {
+    // Deduplication: for lesson_completed and track_completed, only send one email per event.
+    // Handles both duplicate notification_rules and duplicate frontend calls.
+    const dedupeWindowMinutes = 5;
+    if (['lesson_completed', 'track_completed'].includes(eventType)) {
+      const dedupeKey = eventType === 'lesson_completed'
+        ? (context as { lesson_id?: string }).lesson_id
+        : (context as { learning_track_id?: string }).learning_track_id;
+      if (dedupeKey) {
+        const cutoff = new Date(Date.now() - dedupeWindowMinutes * 60 * 1000).toISOString();
+        const { data: recent } = await supabase
+          .from('notification_history')
+          .select('id')
+          .eq('user_id', user_id)
+          .eq('trigger_event', eventType)
+          .eq('status', 'sent')
+          .gte('sent_at', cutoff)
+          .limit(1);
+        if (recent && recent.length > 0) {
+          console.debug(`[notifications] Skipping duplicate ${eventType} for user ${user_id} (recent send within ${dedupeWindowMinutes}m)`);
+          return;
+        }
+      }
+    }
+
+    // For lesson_completed and track_completed, only process first rule (duplicate rules cause 2 emails)
+    const rulesToProcess = (['lesson_completed', 'track_completed'].includes(eventType) && rules.length > 1)
+      ? rules.slice(0, 1)
+      : rules;
+
+    for (const rule of rulesToProcess) {
       try {
         if (rule.trigger_conditions && !checkTriggerConditions(rule.trigger_conditions, context)) {
           console.debug(`[notifications] Trigger conditions not met for rule ${rule.name}`);
@@ -151,12 +188,15 @@ export async function sendNotificationByEvent(
         // Type-specific preference gate
         let typeEnabled = true;
         let skipReason = '';
-        if (['lesson_completed', 'track_milestone_50', 'track_completed'].includes(eventType)) {
+        if (['lesson_completed', 'track_milestone_50', 'track_completed', 'course_completion'].includes(eventType)) {
           typeEnabled = preferences.track_completions !== false;
           if (!typeEnabled) skipReason = `${preferenceSource}_track_completions_disabled`;
-        } else if (eventType === 'quiz_high_score' || eventType.startsWith('quiz_')) {
+        } else if (eventType === 'quiz_high_score' || eventType === 'achievement' || eventType.startsWith('quiz_')) {
           typeEnabled = preferences.achievements !== false;
           if (!typeEnabled) skipReason = `${preferenceSource}_achievements_disabled`;
+        } else if (eventType === 'lesson_reminder') {
+          typeEnabled = preferences.lesson_reminders !== false;
+          if (!typeEnabled) skipReason = `${preferenceSource}_lesson_reminders_disabled`;
         } else if (eventType === 'document_assigned') {
           const pref = (preferences as Record<string, unknown>).document_notifications;
           typeEnabled = pref !== false;
@@ -236,12 +276,17 @@ export async function gatherTemplateVariables(
   context: NotificationContext,
   templateText?: string
 ): Promise<Record<string, unknown>> {
-  const clientId = context.clientId;
-  const origin = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://staysecure-learn.raynsecure.com';
-  const clientPath = clientId && clientId !== 'default' ? `/${clientId}` : '';
-  const clientLoginUrl = `${origin}${clientPath}/login`;
+  const explicitClientId = context.clientId;
+  const appBase =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : (() => {
+          const b = EmailService.getInstance().getBaseUrl();
+          return b ? b.replace(/\/$/, '') : DEFAULT_LEARN_APP_BASE_URL;
+        })();
+
+  const resolvedClientId = await resolveLearnClientIdForEmailUrls(supabase, explicitClientId);
+  const clientLoginUrl = buildLearnLoginUrl({ appBaseUrl: appBase, clientId: resolvedClientId });
 
   // ── lesson_completed ──────────────────────────────────────────────────────
   if (eventType === 'lesson_completed' && context.lesson_id) {
@@ -249,9 +294,9 @@ export async function gatherTemplateVariables(
       user_id: context.user_id,
       lesson_id: context.lesson_id,
       learning_track_id: context.learning_track_id,
-      clientId,
+      clientId: resolvedClientId,
+      next_lesson_available_date: context.next_lesson_available_date,
     });
-    variables = { ...variables, client_login_url: clientLoginUrl };
     if (templateText) {
       variables = await mergeWithLookup(supabase, variables, templateText, context);
     }
@@ -268,7 +313,7 @@ export async function gatherTemplateVariables(
       .single();
 
     const { data: track } = await supabase
-      .from('learning_tracks').select('title').eq('id', context.learning_track_id).single();
+      .from('learning_tracks').select('title, description').eq('id', context.learning_track_id).single();
 
     const { data: profile } = await supabase
       .from('profiles').select('full_name').eq('id', context.user_id).single();
@@ -305,13 +350,21 @@ export async function gatherTemplateVariables(
       timeSpentHours = Math.round((totalMs / (1000 * 60 * 60)) * 10) / 10;
     }
 
+    const completionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const completionTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const progressPct = trackProgress?.progress_percentage || 0;
+
     let variables: Record<string, unknown> = {
       user_name: profile?.full_name || 'User',
       learning_track_title: track?.title || 'Learning Track',
-      track_progress_percentage: trackProgress?.progress_percentage || 0,
+      learning_track_description: track?.description || '',
+      track_progress_percentage: progressPct,
+      completion_percentage: progressPct,
       lessons_completed_in_track: lessonsCompletedInTrack,
       total_lessons_in_track: totalLessons,
       time_spent_hours: timeSpentHours,
+      completion_date: completionDate,
+      completion_time: completionTime,
       client_login_url: clientLoginUrl,
     };
     if (templateText) {
@@ -363,10 +416,17 @@ export async function gatherTemplateVariables(
       else completionTime = `${seconds} second${seconds !== 1 ? 's' : ''}`;
     }
 
+    const quizScore = context.score || 0;
+    const quizCompletionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
     let variables: Record<string, unknown> = {
       user_name: profile?.full_name || 'User',
       quiz_title: lesson.title || 'Quiz',
-      score: context.score || 0,
+      lesson_title: lesson.title || 'Quiz',
+      score: quizScore,
+      completion_score: quizScore,
+      completion_percentage: quizScore,
+      completion_date: quizCompletionDate,
       correct_answers: correctAnswers,
       total_questions: totalQuestions,
       completion_time: completionTime,
@@ -381,9 +441,15 @@ export async function gatherTemplateVariables(
   }
 
   // ── document_assigned ─────────────────────────────────────────────────────
-  if (eventType === 'document_assigned') {
-    const { data: profile } = await supabase
-      .from('profiles').select('full_name').eq('id', context.user_id).single();
+  // The template's DB type is 'documents'; the trigger event is 'document_assigned'.
+  // The preview calls this with template.type ('documents'), so we accept both.
+  if (eventType === 'document_assigned' || eventType === 'documents') {
+    const [{ data: profile }, { data: document }] = await Promise.all([
+      supabase.from('profiles').select('full_name').eq('id', context.user_id).single(),
+      context.document_id
+        ? supabase.from('documents').select('url').eq('document_id', context.document_id).single()
+        : Promise.resolve({ data: null }),
+    ]);
 
     const dueDays = context.due_days || 0;
     const dueDate = dueDays > 0
@@ -394,11 +460,19 @@ export async function gatherTemplateVariables(
         })()
       : 'No due date';
 
+    // External URL docs → use the URL directly.
+    // Stored-file docs (url is null) → send to the login page with ?doc= so the app can
+    // auto-open the document after the user authenticates (deep-link pattern).
+    const externalUrl = (document as { url?: string | null } | null)?.url;
+    const documentUrl = externalUrl
+      || (context.document_id ? `${clientLoginUrl}?doc=${context.document_id}` : clientLoginUrl);
+
     return {
       user_name: profile?.full_name || 'User',
       document_title: context.document_title || '',
       due_date: dueDate,
       due_days: dueDays,
+      document_url: documentUrl,
       login_url: clientLoginUrl,
       client_login_url: clientLoginUrl,
     };
@@ -430,28 +504,185 @@ export async function gatherTemplateVariables(
     };
   }
 
+  // ── manager_staff_pending ─────────────────────────────────────────────────
+  // user_id = manager (the recipient); queries their pending staff directly
+  if (eventType === 'manager_staff_pending') {
+    const { data: managerProfile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    const { data: pendingStaff } = await supabase
+      .from('profiles')
+      .select('full_name, email, created_at')
+      .eq('manager', context.user_id)
+      .eq('status', 'Pending');
+
+    const pendingEmployees = (pendingStaff || []).map((p: { full_name?: string; email?: string; created_at?: string }) => ({
+      full_name: p.full_name || 'Team member',
+      email: p.email || '',
+      invited_at: p.created_at
+        ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '',
+    }));
+
+    let variables: Record<string, unknown> = {
+      manager_name: managerProfile?.full_name || 'Manager',
+      pending_count: pendingEmployees.length,
+      pending_employees: pendingEmployees,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
   // ── manager_employee_incomplete ───────────────────────────────────────────
   if (eventType === 'manager_employee_incomplete') {
     const managerId = context.manager_id || context.user_id;
     const { data: managerProfile } = await supabase
       .from('profiles').select('full_name').eq('id', managerId).single();
-    const { data: employeeProfile } = await supabase
-      .from('profiles').select('full_name, username').neq('id', managerId).limit(1).single();
-    const { data: sampleLessons } = await supabase.from('lessons').select('id, title').limit(3);
 
-    const incompleteLessons = (sampleLessons || []).map((l: { id: string; title: string }) => ({
-      lesson_title: l.title, learning_track_title: 'Cybersecurity Fundamentals', due_date: null,
-    }));
-    const employeeName = employeeProfile?.full_name || 'Employee Name';
-    const employeeEmail = employeeProfile?.username || 'employee@example.com';
+    // Preview mock: build a sample incomplete_employees list matching the template shape.
+    // Real sends go through the process-scheduled-notifications Edge Function which
+    // queries real data and builds this array from actual employee records.
+    const { data: sampleEmployees } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .neq('id', managerId)
+      .limit(2);
+
+    const incompleteEmployees = (sampleEmployees || []).map(
+      (p: { full_name?: string }, i: number) => ({
+        full_name: p.full_name || `Team Member ${i + 1}`,
+        incomplete_count: i + 1,
+      })
+    );
+    const firstEmployee = incompleteEmployees[0];
 
     let variables: Record<string, unknown> = {
       manager_name: managerProfile?.full_name || 'Manager Name',
-      employee_name: employeeName, employee_email: employeeEmail,
-      user_name: employeeName, user_email: employeeEmail,
-      reminder_attempts: 3, multiple_attempts: true,
-      incomplete_lessons: incompleteLessons,
-      total_incomplete_count: incompleteLessons.length,
+      employee_name: firstEmployee?.full_name || 'Team Member',
+      user_name: managerProfile?.full_name || 'Manager Name',
+      reminder_attempts: 3,
+      multiple_attempts: true,
+      incomplete_employees: incompleteEmployees,
+      total_incomplete_count: incompleteEmployees.length,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── achievement ───────────────────────────────────────────────────────────
+  if (eventType === 'achievement') {
+    const { data: profile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    const achievementDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Prefer values passed directly in context (e.g. from awardTrophy); fall back to cert lookup
+    let achievementName = (context.achievement_name as string | undefined) || '';
+    let achievementDescription = (context.achievement_description as string | undefined) || '';
+
+    if (!achievementName && context.certificate_id) {
+      const { data: cert } = await supabase
+        .from('certificates')
+        .select('name, type')
+        .eq('id', context.certificate_id)
+        .maybeSingle();
+      achievementName = cert?.name || '';
+      achievementDescription = cert?.type || '';
+    }
+
+    let variables: Record<string, unknown> = {
+      user_name: profile?.full_name || 'User',
+      achievement_name: achievementName,
+      achievement_description: achievementDescription,
+      achievement_date: achievementDate,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── course_completion ─────────────────────────────────────────────────────
+  if (eventType === 'course_completion') {
+    const { data: profile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    let courseName = '';
+    if (context.lesson_id) {
+      const { data: lessonData } = await supabase
+        .from('lessons').select('title').eq('id', context.lesson_id).maybeSingle();
+      courseName = lessonData?.title || '';
+    }
+
+    const completionDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    let variables: Record<string, unknown> = {
+      user_name: profile?.full_name || 'User',
+      course_name: courseName,
+      completion_date: completionDate,
+      score: context.score ?? 0,
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── lesson_reminder ───────────────────────────────────────────────────────
+  if (eventType === 'lesson_reminder') {
+    const { data: profile } = await supabase
+      .from('profiles').select('full_name').eq('id', context.user_id).maybeSingle();
+
+    let lessonTitle = '';
+    let trackTitle = '';
+
+    const targetLessonId = context.next_lesson_id || context.lesson_id;
+    if (targetLessonId) {
+      const { data: lessonData } = await supabase
+        .from('lessons').select('title').eq('id', targetLessonId).maybeSingle();
+      lessonTitle = lessonData?.title || '';
+    }
+
+    if (context.learning_track_id) {
+      const { data: trackData } = await supabase
+        .from('learning_tracks').select('title').eq('id', context.learning_track_id).maybeSingle();
+      trackTitle = trackData?.title || '';
+    }
+
+    let variables: Record<string, unknown> = {
+      user_name: profile?.full_name || 'User',
+      lesson_title: lessonTitle,
+      learning_track_title: trackTitle,
+      next_lesson_available_date: context.next_lesson_available_date || '',
+      client_login_url: clientLoginUrl,
+    };
+    if (templateText) {
+      variables = await mergeWithLookup(supabase, variables, templateText, context);
+    }
+    return variables;
+  }
+
+  // ── license_near_capacity ─────────────────────────────────────────────────
+  if (eventType === 'license_near_capacity') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', context.user_id)
+      .maybeSingle();
+
+    let variables: Record<string, unknown> = {
+      admin_name: profile?.full_name || 'Administrator',
+      used_seats: context.used_seats ?? '',
+      total_seats: context.total_seats ?? '',
+      pct_used: context.pct_used ?? '',
       client_login_url: clientLoginUrl,
     };
     if (templateText) {
