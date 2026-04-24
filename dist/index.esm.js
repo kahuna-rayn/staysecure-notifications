@@ -679,7 +679,7 @@ const emailService = EmailService.getInstance();
 async function gatherLessonCompletedVariables(supabaseClient, event) {
   var _a;
   try {
-    const { data: user } = await supabaseClient.from("profiles").select("full_name, username").eq("id", event.user_id).single();
+    const { data: user } = await supabaseClient.from("profiles").select("full_name, email").eq("id", event.user_id).single();
     const { data: lesson } = await supabaseClient.from("lessons").select("title, description, duration_minutes").eq("id", event.lesson_id).single();
     const appBase = typeof window !== "undefined" ? window.location.origin : (() => {
       const b = EmailService.getInstance().getBaseUrl();
@@ -717,7 +717,7 @@ async function gatherLessonCompletedVariables(supabaseClient, event) {
     const nextAvailableDate = event.next_lesson_available_date ? new Date(event.next_lesson_available_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
     return {
       user_name: (user == null ? void 0 : user.full_name) || "User",
-      user_email: (user == null ? void 0 : user.username) || "",
+      user_email: (user == null ? void 0 : user.email) || "",
       lesson_title: (lesson == null ? void 0 : lesson.title) || "Lesson",
       lesson_description: (lesson == null ? void 0 : lesson.description) || "",
       lesson_duration: (lesson == null ? void 0 : lesson.duration_minutes) ? `${lesson.duration_minutes} min` : "",
@@ -1763,14 +1763,14 @@ function RecentEmailNotifications({
         return;
       }
       const userIds = [...new Set(notifications2.map((n) => n.user_id))];
-      const { data: profiles, error: profilesError } = await supabaseClient.from("profiles").select("id, username").in("id", userIds);
+      const { data: profiles, error: profilesError } = await supabaseClient.from("profiles").select("id, email").in("id", userIds);
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
       }
       const emailMap = /* @__PURE__ */ new Map();
       profiles == null ? void 0 : profiles.forEach((profile) => {
-        if (profile.username) {
-          emailMap.set(profile.id, profile.username);
+        if (profile.email) {
+          emailMap.set(profile.id, profile.email);
         }
       });
       const mappedData = notifications2.map((notification) => ({
@@ -2146,8 +2146,8 @@ async function sendNotificationByEvent(supabase2, eventType, context) {
       console.warn(`Cannot send ${eventType} notification: no user_id provided`);
       return;
     }
-    const { data: profile } = await supabase2.from("profiles").select("username").eq("id", user_id).single();
-    const userEmail = profile == null ? void 0 : profile.username;
+    const { data: profile } = await supabase2.from("profiles").select("email").eq("id", user_id).single();
+    const userEmail = profile == null ? void 0 : profile.email;
     if (!userEmail) {
       console.warn(`Cannot send ${eventType} notification: no email for user ${user_id}`);
       await supabase2.from("notification_history").insert({
@@ -2155,7 +2155,7 @@ async function sendNotificationByEvent(supabase2, eventType, context) {
         trigger_event: eventType,
         status: "skipped",
         skip_reason: "no_email",
-        error_message: `No email found in profiles.username for user ${user_id}`,
+        error_message: `No email found in profiles.email for user ${user_id}`,
         template_variables: context
       });
       return;
@@ -2438,10 +2438,10 @@ async function gatherTemplateVariables(supabase2, eventType, context, templateTe
   }
   if (eventType === "manager_staff_pending") {
     const { data: managerProfile } = await supabase2.from("profiles").select("full_name").eq("id", context.user_id).maybeSingle();
-    const { data: pendingStaff } = await supabase2.from("profiles").select("full_name, username, created_at").eq("manager", context.user_id).eq("status", "Pending");
+    const { data: pendingStaff } = await supabase2.from("profiles").select("full_name, email, created_at").eq("manager", context.user_id).eq("status", "Pending");
     const pendingEmployees = (pendingStaff || []).map((p) => ({
       full_name: p.full_name || "Team member",
-      email: p.username || "",
+      email: p.email || "",
       invited_at: p.created_at ? new Date(p.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : ""
     }));
     let variables2 = {
