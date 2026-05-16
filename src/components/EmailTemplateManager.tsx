@@ -109,6 +109,24 @@ export default function EmailTemplateManager({
   }>({ open: false, type: 'success', message: '' });
   const [previewVariables, setPreviewVariables] = useState<Record<string, unknown> | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [deleteConfirmTemplate, setDeleteConfirmTemplate] = useState<EmailTemplate | null>(null);
+  const [appNotice, setAppNotice] = useState<{
+    open: boolean;
+    title: string;
+    description?: string;
+    variant?: 'default' | 'destructive';
+  }>({ open: false, title: '' });
+
+  const notify = React.useCallback(
+    (opts: { title: string; description?: string; variant?: 'default' | 'destructive' }) => {
+      if (toast) {
+        toast(opts);
+      } else {
+        setAppNotice({ open: true, ...opts });
+      }
+    },
+    [toast]
+  );
 
   // Add CSS animation keyframes
   React.useEffect(() => {
@@ -225,24 +243,42 @@ export default function EmailTemplateManager({
     }
   };
 
-  const handleDelete = async (template: EmailTemplate) => {
+  const requestDeleteTemplate = (template: EmailTemplate) => {
     if (template.is_system) {
-      alert('System templates cannot be deleted');
+      notify({
+        title: 'Cannot delete system template',
+        description: 'System templates cannot be deleted.',
+        variant: 'destructive',
+      });
       return;
     }
+    setDeleteConfirmTemplate(template);
+  };
 
-    if (confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      try {
-        const { error } = await supabaseClient
-          .from('email_templates')
-          .delete()
-          .eq('id', template.id);
+  const executeDeleteTemplate = async () => {
+    const template = deleteConfirmTemplate;
+    if (!template) return;
+    try {
+      const { error } = await supabaseClient
+        .from('email_templates')
+        .delete()
+        .eq('id', template.id);
 
-        if (error) throw error;
-        loadTemplates();
-      } catch (err: any) {
-        alert(`Error deleting template: ${err.message}`);
-      }
+      if (error) throw error;
+      await loadTemplates();
+      notify({
+        title: 'Template deleted',
+        description: `"${template.name}" was removed.`,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      notify({
+        title: 'Error deleting template',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteConfirmTemplate(null);
     }
   };
 
@@ -260,9 +296,14 @@ export default function EmailTemplateManager({
         });
 
       if (error) throw error;
-      loadTemplates();
-    } catch (err: any) {
-      alert(`Error duplicating template: ${err.message}`);
+      await loadTemplates();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      notify({
+        title: 'Error duplicating template',
+        description: message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -425,11 +466,7 @@ export default function EmailTemplateManager({
           .insert(templateData);
         
         if (error) throw error;
-        if (toast) {
-          toast({ title: 'Template created successfully' });
-        } else {
-          alert('Template created successfully');
-        }
+        notify({ title: 'Template created successfully' });
       } else {
         // Update existing template
         const { error } = await supabaseClient
@@ -438,27 +475,20 @@ export default function EmailTemplateManager({
           .eq('id', selectedTemplate.id);
         
         if (error) throw error;
-        if (toast) {
-          toast({ title: 'Template updated successfully' });
-        } else {
-          alert('Template updated successfully');
-        }
+        notify({ title: 'Template updated successfully' });
       }
 
       setIsEditing(false);
       setIsCreating(false);
       setSelectedTemplate(null);
-      loadTemplates();
-    } catch (err: any) {
-      if (toast) {
-        toast({ 
-          title: 'Error saving template', 
-          description: err.message,
-          variant: 'destructive' 
-        });
-      } else {
-        alert(`Error saving template: ${err.message}`);
-      }
+      await loadTemplates();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      notify({
+        title: 'Error saving template',
+        description: message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -674,7 +704,7 @@ export default function EmailTemplateManager({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDelete(template)}
+                              onClick={() => requestDeleteTemplate(template)}
                               className="text-red-600 hover:text-red-700"
                               title="Delete Template"
                               style={{ backgroundColor: 'orange', color: 'white' }}
@@ -846,6 +876,43 @@ export default function EmailTemplateManager({
                 )}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <Dialog open={!!deleteConfirmTemplate} onOpenChange={(open: boolean) => !open && setDeleteConfirmTemplate(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete template?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete &quot;{deleteConfirmTemplate?.name}&quot;? This cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmTemplate(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => void executeDeleteTemplate()}>
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {!toast && (
+        <Dialog open={appNotice.open} onOpenChange={(open: boolean) => setAppNotice((prev) => ({ ...prev, open }))}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className={appNotice.variant === 'destructive' ? 'text-destructive' : undefined}>
+                {appNotice.title}
+              </DialogTitle>
+            </DialogHeader>
+            {appNotice.description ? (
+              <p className="text-sm text-muted-foreground">{appNotice.description}</p>
+            ) : null}
+            <div className="flex justify-end">
+              <Button onClick={() => setAppNotice((prev) => ({ ...prev, open: false }))}>OK</Button>
+            </div>
           </DialogContent>
         </Dialog>
       )}
